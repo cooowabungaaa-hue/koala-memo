@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>国内コアラ名鑑</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#2e7d32">
+    <link rel="apple-touch-koalaface" href="koalaface.png">
+
+    <style>
+        /* デザインの設定（ユーカリ色とコアラ色） */
+        body {
+            font-family: "Helvetica Neue", Arial, sans-serif;
+            background-color: #f4f7f6;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+            /* iPhoneの切り欠き対策 */
+            padding-top: env(safe-area-inset-top);
+        }
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        h1 {
+            color: #2e7d32;
+        }
+        .search-box {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        input[type="text"] {
+            padding: 10px;
+            width: 80%;
+            max-width: 400px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        
+        /* コアラカードのレイアウト */
+        .koala-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        .koala-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            border-left: 5px solid #2e7d32;
+        }
+        .koala-name {
+            font-size: 1.5em;
+            font-weight: bold;
+            margin: 0 0 10px 0;
+            color: #444;
+        }
+        .koala-zoo {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            display: inline-block;
+            margin-bottom: 10px;
+        }
+        .koala-info {
+            font-size: 0.95em;
+            line-height: 1.6;
+        }
+        .label {
+            font-weight: bold;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>🐨 国内コアラ名鑑</h1>
+    <p>国内動物園で飼育されているコアラのデータベース</p>
+</header>
+
+<div class="search-box">
+    <input type="text" id="searchInput" placeholder="名前や動物園で検索..." onkeyup="filterKoalas()">
+</div>
+
+<div id="koalaList" class="koala-list">
+    </div>
+
+<script>
+    // ▼▼▼ PWAの登録処理 ▼▼▼
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+            navigator.serviceWorker.register('./service-worker.js').then(function(registration) {
+                console.log('ServiceWorker registration successful');
+            }, function(err) {
+                console.log('ServiceWorker registration failed: ', err);
+            });
+        });
+    }
+
+    // ▼▼▼ コアラデータ ▼▼▼
+    const koalaData = [
+        {
+            name: "見本コアラ太郎",
+            zoo: "○○動物園",
+            birthday: "2015-05-20",
+            parents: "父：パパコアラ / 母：ママコアラ",
+            death: "", 
+            move: "2017年に△△動物園から来園"
+        },
+        {
+            name: "サンプル花子",
+            zoo: "××動植物園",
+            birthday: "2018-12-10",
+            parents: "父：不明 / 母：サクラ",
+            death: "",
+            move: "なし"
+        },
+        {
+            name: "レジェンド・コアラ",
+            zoo: "メモリアルパーク",
+            birthday: "2000-01-01",
+            parents: "父：豪州太郎 / 母：ビクトリア",
+            death: "2015-08-15",
+            move: "2002年来日"
+        }
+    ];
+
+    function renderKoalas(data) {
+        const list = document.getElementById('koalaList');
+        list.innerHTML = ''; 
+        data.forEach(koala => {
+            const status = koala.death ? `<span style="color:gray;">(🌈 ${koala.death})</span>` : '';
+            const html = `
+                <div class="koala-card">
+                    <div class="koala-name">${koala.name} ${status}</div>
+                    <div class="koala-zoo">${koala.zoo}</div>
+                    <div class="koala-info">
+                        <div><span class="label">誕生日:</span> ${koala.birthday}</div>
+                        <div><span class="label">両親:</span> ${koala.parents}</div>
+                        <div><span class="label">移動歴:</span> ${koala.move}</div>
+                    </div>
+                </div>
+            `;
+            list.innerHTML += html;
+        });
+    }
+
+    function filterKoalas() {
+        const input = document.getElementById('searchInput').value.toLowerCase();
+        const filtered = koalaData.filter(koala => 
+            koala.name.toLowerCase().includes(input) || 
+            koala.zoo.toLowerCase().includes(input)
+        );
+        renderKoalas(filtered);
+    }
+
+    renderKoalas(koalaData);
+</script>
+
+</body>
+</html>
