@@ -95,29 +95,19 @@
     </div>
 
 <script>
-    // ▼▼▼ PWAの登録処理 ▼▼▼
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', function() {
-            navigator.serviceWorker.register('./service-worker.js').then(function(registration) {
-                console.log('ServiceWorker registration successful');
-            }, function(err) {
-                console.log('ServiceWorker registration failed: ', err);
-            });
-        });
-    }
 
     // ▼▼▼ コアラデータ ▼▼▼
     const koalaData = [
         {
-            name: "見本コアラ太郎",
-            zoo: "○○動物園",
-            birthday: "2015-05-20",
-            parents: "父：パパコアラ / 母：ママコアラ",
+            name: "ししお",
+            zoo: "東山",
+            birthday: "2022/4/4",
+            parents: "父：タイチ / 母：ホリー",
             death: "", 
-            move: "2017年に△△動物園から来園"
+            move: "なし"
         },
         {
-            name: "サンプル花子",
+            name: "あああ",
             zoo: "××動植物園",
             birthday: "2018-12-10",
             parents: "父：不明 / 母：サクラ",
