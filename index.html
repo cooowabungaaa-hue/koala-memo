@@ -194,12 +194,29 @@
             color: #555;
             line-height: 1.5;
         }
+
+        /* ▼▼▼ 追加：リンク用のデザイン ▼▼▼ */
+        a.zoo-link {
+            text-decoration: none;      /* 下線を消す */
+            color: inherit;             /* 文字色を親に合わせる */
+            display: inline-flex;       /* アイコンと並べる */
+            align-items: center;
+            gap: 5px;
+            transition: opacity 0.2s;
+        }
+        a.zoo-link:hover {
+            opacity: 0.7;               /* マウスを乗せたら少し薄く */
+            text-decoration: underline; /* 下線を出す */
+        }
+        .link-icon {
+            font-size: 0.8em;
+        }
     </style>
 </head>
 <body>
 
 <header>
-    <h1>🐨 コアラメモ　🐨</h1>
+    <h1>🐨 コアラメモ 🐨</h1>
     <p class="subtitle">Japan Koala Database</p>
 </header>
 
@@ -224,7 +241,23 @@
 </div>
 
 <script>
+    // ▼▼▼ コアラデータ（最初は空っぽ） ▼▼▼
     let koalaData = [];
+
+    // ▼▼▼ 動物園の公式サイトURLリスト（ここに追加・編集できます） ▼▼▼
+    // ※スプレッドシートの動物園名と完全に一致させてください
+    const zooUrls = {
+        "東山": "https://www.higashiyama.city.nagoya.jp/",
+        "多摩": "https://www.tokyo-zoo.net/zoo/tama/",
+        "埼玉県こども": "https://www.parks.or.jp/sczoo/",
+        "埼玉": "https://www.parks.or.jp/sczoo/",
+        "平川": "https://hirakawazoo.jp/",
+        "金沢": "https://www.hama-midorinokyokai.or.jp/zoo/kanazawa/",
+        "王子": "https://www.kobe-ojizoo.jp/",
+        "神戸市立王子": "https://www.kobe-ojizoo.jp/",
+        "淡路": "https://www.england-hill.com/",
+        "天王寺": "https://www.tennojizoo.jp/"
+    };
 
     // ▼▼▼ スプレッドシート読み込み ▼▼▼
     function loadFromSpreadsheet() {
@@ -241,11 +274,8 @@
 
                 console.log("読み込み完了:", koalaData);
                 
-                // 1. 動物園のプルダウンを作る
                 populateZooFilter();
-                // 2. 今月誕生日の子を表示する
                 showBirthdayKoalas();
-                // 3. 全リストを表示する
                 renderKoalas(koalaData);
             },
             error: function(err) {
@@ -257,9 +287,7 @@
 
     // ▼▼▼ 1. 動物園プルダウンの自動生成 ▼▼▼
     function populateZooFilter() {
-        // データから動物園名だけを取り出し、重複を消してリストにする
         const zoos = [...new Set(koalaData.map(k => k.zoo).filter(z => z))].sort();
-        
         const select = document.getElementById('zooFilter');
         zoos.forEach(zoo => {
             const option = document.createElement('option');
@@ -272,36 +300,26 @@
     // ▼▼▼ 2. 今月誕生日の子を表示 ▼▼▼
     function showBirthdayKoalas() {
         const today = new Date();
-        const currentMonth = today.getMonth() + 1; // 今月（1-12）
+        const currentMonth = today.getMonth() + 1;
         
-        // タイトルを更新
         document.getElementById('birthdayTitle').textContent = `🎉 今月（${currentMonth}月）のお誕生日 🎉`;
 
-        // 今月生まれで、かつ亡くなっていない（deathが空）の子を探す
         const birthdayKoalas = koalaData.filter(k => {
-            if (!k.birthday) return false; // 誕生日データがない場合は除外
-            if (k.death && k.death !== "") return false; // 亡くなっている場合は除外
-
-            // "2022/4/4" や "2022-04-04" から「月」を取り出す
+            if (!k.birthday || (k.death && k.death !== "")) return false;
             const parts = k.birthday.split(/[-/]/); 
             if (parts.length < 2) return false;
-            
-            const month = parseInt(parts[1], 10);
-            return month === currentMonth;
+            return parseInt(parts[1], 10) === currentMonth;
         });
 
-        // いなければセクションごと隠す
         if (birthdayKoalas.length === 0) {
             document.getElementById('birthdaySection').style.display = 'none';
             return;
         }
 
-        // 表示エリア
         const list = document.getElementById('birthdayList');
         document.getElementById('birthdaySection').style.display = 'block';
 
         birthdayKoalas.forEach(koala => {
-            // 簡易カードを作成
             const div = document.createElement('div');
             div.className = 'birthday-card';
             div.innerHTML = `
@@ -330,6 +348,16 @@
             if (koala.gender && koala.gender.includes('オス')) genderClass = 'male';
             if (koala.gender && koala.gender.includes('メス')) genderClass = 'female';
 
+            // ★URLがあるかチェックして、リンク用のHTMLを作る
+            let zooDisplay = `📍 ${koala.zoo}`; // デフォルトは文字だけ
+            const url = zooUrls[koala.zoo];     // リストからURLを探す
+            
+            // URLが見つかったらリンクタグに変える
+            if (url) {
+                zooDisplay = `<a href="${url}" target="_blank" class="zoo-link">📍 ${koala.zoo} <span class="link-icon">🔗</span></a>`;
+            }
+
+            // カードのHTML
             const html = `
                 <div class="koala-card">
                     <div class="koala-header">
@@ -338,7 +366,7 @@
                         <span class="badge age">${koala.age || "-"}</span>
                     </div>
 
-                    <div class="koala-zoo">📍 ${koala.zoo}</div>
+                    <div class="koala-zoo">${zooDisplay}</div>
 
                     <div class="detail-grid">
                         <span class="label-icon">🎂</span> <span>${koala.birthday}</span>
@@ -355,15 +383,11 @@
 
     function filterKoalas() {
         const textInput = document.getElementById('searchInput').value.toLowerCase();
-        const zooSelect = document.getElementById('zooFilter').value; // 選ばれた動物園
+        const zooSelect = document.getElementById('zooFilter').value;
         
         const filtered = koalaData.filter(koala => {
-            // 1. テキスト検索（名前やメモ）
             const matchesText = (koala.name + koala.memo).toLowerCase().includes(textInput);
-            
-            // 2. 動物園絞り込み（選択されていれば一致するかチェック）
             const matchesZoo = zooSelect === "" || koala.zoo === zooSelect;
-
             return matchesText && matchesZoo;
         });
         
@@ -371,7 +395,6 @@
     }
 
     window.addEventListener('load', loadFromSpreadsheet);
-
 </script>
 </body>
 </html>
