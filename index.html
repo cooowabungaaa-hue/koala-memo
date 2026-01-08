@@ -39,13 +39,13 @@
             margin-top: 5px;
         }
 
-        /* ▼ 今月のお誕生日エリア（特別仕様） */
+        /* ▼ 今月のお誕生日エリア */
         #birthdaySection {
             background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
             border-radius: 12px;
             padding: 15px;
             margin-bottom: 30px;
-            display: none; /* 対象がいない時は隠す */
+            display: none;
             border: 2px solid #ffcc80;
         }
 
@@ -59,20 +59,34 @@
 
         .birthday-list {
             display: flex;
-            overflow-x: auto; /* 横スクロール可能に */
+            overflow-x: auto;
             gap: 15px;
             padding-bottom: 5px;
         }
 
-        /* 誕生日用のカード（少し小さめ） */
         .birthday-card {
             background: white;
             padding: 10px;
             border-radius: 8px;
-            min-width: 200px; /* カードの幅 */
+            min-width: 200px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             border-top: 4px solid #ff9800;
             flex-shrink: 0;
+        }
+
+        /* ▼ 天国の子用デザイン（うっすら灰色） */
+        .deceased-style {
+            background-color: #f0f0f0; /* 背景を薄いグレーに */
+            opacity: 0.9;              /* 少しだけ薄くする */
+            border-color: #ccc !important; /* ボーダー色も控えめに */
+            color: #666;               /* 文字色も少し薄く */
+        }
+        .deceased-style .badge.age {
+            background-color: #999;    /* 年齢バッジもグレーに */
+        }
+        .deceased-style .koala-zoo {
+            background-color: #eee;    /* 動物園バッジもグレー系に */
+            color: #666;
         }
 
         /* ▼ 検索ボックスエリア */
@@ -92,21 +106,19 @@
             flex-wrap: wrap;
         }
 
-        /* テキスト入力 */
         input[type="text"] {
             padding: 12px;
             border: 2px solid #ddd;
             border-radius: 8px;
             font-size: 16px;
             outline: none;
-            flex: 1; /* 横幅いっぱいに広がる */
+            flex: 1;
             min-width: 200px;
         }
         input[type="text"]:focus {
             border-color: #2e7d32;
         }
 
-        /* 動物園プルダウン */
         select {
             padding: 12px;
             border: 2px solid #ddd;
@@ -125,8 +137,17 @@
             max-width: 1000px;
             margin: 0 auto;
         }
+        
+        /* おすすめ見出し */
+        .recommend-title {
+            grid-column: 1 / -1;
+            text-align: center;
+            font-weight: bold;
+            color: #2e7d32;
+            margin-bottom: 10px;
+            display: none; /* 初期は隠す */
+        }
 
-        /* 通常のコアラカード */
         .koala-card {
             background: white;
             padding: 20px;
@@ -151,7 +172,6 @@
             color: #333;
         }
 
-        /* バッジ類 */
         .badge {
             font-size: 0.75em;
             padding: 3px 8px;
@@ -195,18 +215,18 @@
             line-height: 1.5;
         }
 
-        /* ▼▼▼ 追加：リンク用のデザイン ▼▼▼ */
+        /* リンク用のデザイン */
         a.zoo-link {
-            text-decoration: none;      /* 下線を消す */
-            color: inherit;             /* 文字色を親に合わせる */
-            display: inline-flex;       /* アイコンと並べる */
+            text-decoration: none;
+            color: inherit;
+            display: inline-flex;
             align-items: center;
             gap: 5px;
             transition: opacity 0.2s;
         }
         a.zoo-link:hover {
-            opacity: 0.7;               /* マウスを乗せたら少し薄く */
-            text-decoration: underline; /* 下線を出す */
+            opacity: 0.7;
+            text-decoration: underline;
         }
         .link-icon {
             font-size: 0.8em;
@@ -232,65 +252,47 @@
         
         <select id="zooFilter" onchange="filterKoalas()">
             <option value="">全ての動物園</option>
-            </select>
+        </select>
     </div>
 </div>
 
 <div id="koalaList" class="koala-list">
-    <p style="text-align:center; color:#999;">データを読み込んでいます...</p>
+    <div id="recommendTitle" class="recommend-title">✨ 今日のおすすめコアラ ✨</div>
+    <div id="loadingMsg" style="text-align:center; color:#999; grid-column:1/-1;">データを読み込んでいます...</div>
 </div>
 
 <script>
-    // ▼▼▼ コアラデータ（最初は空っぽ） ▼▼▼
     let koalaData = [];
 
-    // ▼▼▼ 動物園の// ▼▼▼ 動物園の公式サイトURLリスト（ここに追加・編集できます） ▼▼▼
-    // ※スプレッドシートの「zoo」列にある名前がここに含まれていないとリンクになりません
+    // ▼ 動物園URLリスト（表記ゆれ対応版）
     const zooUrls = {
-        // --- 東山 ---
         "東山": "https://www.higashiyama.city.nagoya.jp/",
         "東山動植物園": "https://www.higashiyama.city.nagoya.jp/",
         "名古屋市東山動植物園": "https://www.higashiyama.city.nagoya.jp/",
-        
-        // --- 多摩 ---
         "多摩": "https://www.tokyo-zoo.net/zoo/tama/",
         "多摩動物公園": "https://www.tokyo-zoo.net/zoo/tama/",
-        
-        // --- 埼玉 ---
         "埼玉": "https://www.parks.or.jp/sczoo/",
         "埼玉県こども": "https://www.parks.or.jp/sczoo/",
         "埼玉県こども動物自然公園": "https://www.parks.or.jp/sczoo/",
-        
-        // --- 平川 ---
         "平川": "https://hirakawazoo.jp/",
         "平川動物公園": "https://hirakawazoo.jp/",
         "鹿児島市平川動物公園": "https://hirakawazoo.jp/",
-        
-        // --- 金沢 ---
         "金沢": "https://www.hama-midorinokyokai.or.jp/zoo/kanazawa/",
         "横浜金沢": "https://www.hama-midorinokyokai.or.jp/zoo/kanazawa/",
         "金沢動物園": "https://www.hama-midorinokyokai.or.jp/zoo/kanazawa/",
         "横浜市立金沢動物園": "https://www.hama-midorinokyokai.or.jp/zoo/kanazawa/",
-        
-        // --- 王子 ---
         "王子": "https://www.kobe-ojizoo.jp/",
-        "神戸王子": "https://www.kobe-ojizoo.jp/",
         "神戸市王子": "https://www.kobe-ojizoo.jp/",
         "神戸市立王子動物園": "https://www.kobe-ojizoo.jp/",
-        
-        // --- 淡路 ---
         "淡路": "https://www.england-hill.com/",
         "イングランドの丘": "https://www.england-hill.com/",
         "淡路ファームパーク": "https://www.england-hill.com/",
-        
-        // --- 天王寺 ---
         "天王寺": "https://www.tennojizoo.jp/",
         "天王寺動物園": "https://www.tennojizoo.jp/"
     };
 
-    // ▼▼▼ スプレッドシート読み込み ▼▼▼
     function loadFromSpreadsheet() {
-        // ★★★ ここにあなたのスプレッドシートURLを貼り付け ★★★
+        // ★ 前回のURLを入れておきました！
         const sheetUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQi6GZ0pWmE1A0MSJBoSyHYaKvAHkgFeBRvZPmMHqHLBh53VzAr5nyJ43qOVuTj4y2xus5nzzurKmUX/pub?gid=107153803&single=true&output=csv";
 
         Papa.parse(sheetUrl, {
@@ -303,18 +305,22 @@
 
                 console.log("読み込み完了:", koalaData);
                 
+                document.getElementById('loadingMsg').style.display = 'none';
+
                 populateZooFilter();
                 showBirthdayKoalas();
-                renderKoalas(koalaData);
+                
+                // ★ 初期表示は「おすすめの3頭」をランダム表示
+                showRandomKoalas(3);
             },
             error: function(err) {
                 console.log("読み込みエラー:", err);
-                document.getElementById('koalaList').innerHTML = '<p>データの読み込みに失敗しました。</p>';
+                document.getElementById('loadingMsg').textContent = 'データの読み込みに失敗しました。';
             }
         });
     }
 
-    // ▼▼▼ 1. 動物園プルダウンの自動生成 ▼▼▼
+    // ▼ 動物園プルダウン生成
     function populateZooFilter() {
         const zoos = [...new Set(koalaData.map(k => k.zoo).filter(z => z))].sort();
         const select = document.getElementById('zooFilter');
@@ -326,15 +332,27 @@
         });
     }
 
-    // ▼▼▼ 2. 今月誕生日の子を表示 ▼▼▼
+    // ▼ 生死に基づいてソートする関数（存命が先、天国が後）
+    function sortKoalasByLife(list) {
+        return list.sort((a, b) => {
+            const aIsDead = (a.death && a.death !== "");
+            const bIsDead = (b.death && b.death !== "");
+            
+            if (aIsDead === bIsDead) return 0; // どちらも同じ状態なら順番そのまま
+            return aIsDead ? 1 : -1; // 天国(true)なら後ろへ
+        });
+    }
+
+    // ▼ 今月誕生日を表示（存命優先＋天国うっすら）
     function showBirthdayKoalas() {
         const today = new Date();
         const currentMonth = today.getMonth() + 1;
         
         document.getElementById('birthdayTitle').textContent = `🎉 今月（${currentMonth}月）のお誕生日 🎉`;
 
-        const birthdayKoalas = koalaData.filter(k => {
-            if (!k.birthday || (k.death && k.death !== "")) return false;
+        // 今月生まれを抽出（天国の子も含める）
+        let birthdayKoalas = koalaData.filter(k => {
+            if (!k.birthday) return false;
             const parts = k.birthday.split(/[-/]/); 
             if (parts.length < 2) return false;
             return parseInt(parts[1], 10) === currentMonth;
@@ -345,14 +363,22 @@
             return;
         }
 
+        // ★ 並び替え：存命 -> 天国
+        birthdayKoalas = sortKoalasByLife(birthdayKoalas);
+
         const list = document.getElementById('birthdayList');
         document.getElementById('birthdaySection').style.display = 'block';
 
         birthdayKoalas.forEach(koala => {
+            const isDead = (koala.death && koala.death !== "");
+            // 天国の子なら専用クラスをつける
+            const deadClass = isDead ? 'deceased-style' : '';
+            const nameSuffix = isDead ? ' (🌈)' : ''; // 名前にも虹マークをつける
+
             const div = document.createElement('div');
-            div.className = 'birthday-card';
+            div.className = `birthday-card ${deadClass}`;
             div.innerHTML = `
-                <div style="font-weight:bold; font-size:1.1em;">${koala.name}</div>
+                <div style="font-weight:bold; font-size:1.1em;">${koala.name}${nameSuffix}</div>
                 <div style="font-size:0.8em; color:#666;">${koala.zoo}</div>
                 <div style="color:#e65100; margin-top:5px;">🎂 ${koala.birthday}</div>
                 <div style="font-size:0.8em; margin-top:3px;">${koala.age}</div>
@@ -361,65 +387,101 @@
         });
     }
 
-    // ▼▼▼ 3. リスト表示と検索機能 ▼▼▼
+    // ▼ ランダムにおすすめコアラを表示（トップ用）
+    function showRandomKoalas(count) {
+        // 全データからランダムに抽出
+        const shuffled = [...koalaData].sort(() => 0.5 - Math.random());
+        const selected = shuffled.slice(0, count);
+
+        document.getElementById('recommendTitle').style.display = 'block';
+        renderKoalas(selected);
+    }
+
+    // ▼ リスト表示（存命優先＋天国うっすら）
     function renderKoalas(data) {
         const list = document.getElementById('koalaList');
-        list.innerHTML = '';
+        // タイトルとローディング以外をクリアするための処理
+        // （recommendTitleやloadingMsgを消さないように注意して再描画）
+        const title = document.getElementById('recommendTitle');
+        const loader = document.getElementById('loadingMsg');
+        list.innerHTML = ''; 
+        list.appendChild(title); // タイトル戻す
+        list.appendChild(loader); // ローダー戻す（非表示だけど）
 
         if (data.length === 0) {
-            list.innerHTML = '<p style="text-align:center;">該当するコアラが見つかりません</p>';
+            const p = document.createElement('p');
+            p.textContent = '該当するコアラが見つかりません';
+            p.style.textAlign = 'center';
+            p.style.gridColumn = '1/-1';
+            list.appendChild(p);
             return;
         }
 
         data.forEach(koala => {
-            // 性別判定
             let genderClass = 'other';
             if (koala.gender && koala.gender.includes('オス')) genderClass = 'male';
             if (koala.gender && koala.gender.includes('メス')) genderClass = 'female';
 
-            // ★URLがあるかチェックして、リンク用のHTMLを作る
-            let zooDisplay = `📍 ${koala.zoo}`; // デフォルトは文字だけ
-            const url = zooUrls[koala.zoo];     // リストからURLを探す
-            
-            // URLが見つかったらリンクタグに変える
+            // ★ 天国判定
+            const isDead = (koala.death && koala.death !== "");
+            const deadClass = isDead ? 'deceased-style' : '';
+            const statusIcon = isDead ? '🌈 ' : '';
+
+            // URL処理
+            let zooDisplay = `📍 ${koala.zoo}`;
+            const url = zooUrls[koala.zoo];
             if (url) {
                 zooDisplay = `<a href="${url}" target="_blank" class="zoo-link">📍 ${koala.zoo} <span class="link-icon">🔗</span></a>`;
             }
 
-            // カードのHTML
-            const html = `
-                <div class="koala-card">
-                    <div class="koala-header">
-                        <div class="koala-name">${koala.name}</div>
-                        <span class="badge ${genderClass}">${koala.gender || "不明"}</span>
-                        <span class="badge age">${koala.age || "-"}</span>
-                    </div>
-
-                    <div class="koala-zoo">${zooDisplay}</div>
-
-                    <div class="detail-grid">
-                        <span class="label-icon">🎂</span> <span>${koala.birthday}</span>
-                        <span class="label-icon">🐨</span> <span>父：${koala.father || "-"}</span>
-                        <span class="label-icon">🐨</span> <span>母：${koala.mother || "-"}</span>
-                    </div>
-                    
-                    ${koala.memo ? `<div class="memo-text">${koala.memo}</div>` : ''}
+            const div = document.createElement('div');
+            div.className = `koala-card ${deadClass}`; // ここにグレーにするクラスを追加
+            div.innerHTML = `
+                <div class="koala-header">
+                    <div class="koala-name">${statusIcon}${koala.name}</div>
+                    <span class="badge ${genderClass}">${koala.gender || "不明"}</span>
+                    <span class="badge age">${koala.age || "-"}</span>
                 </div>
+
+                <div class="koala-zoo">${zooDisplay}</div>
+
+                <div class="detail-grid">
+                    <span class="label-icon">🎂</span> <span>${koala.birthday}</span>
+                    <span class="label-icon">🐨</span> <span>父：${koala.father || "-"}</span>
+                    <span class="label-icon">🐨</span> <span>母：${koala.mother || "-"}</span>
+                </div>
+                
+                ${koala.memo ? `<div class="memo-text">${koala.memo}</div>` : ''}
             `;
-            list.innerHTML += html;
+            list.appendChild(div);
         });
     }
 
+    // ▼ 検索・フィルタ機能（入力時）
     function filterKoalas() {
         const textInput = document.getElementById('searchInput').value.toLowerCase();
         const zooSelect = document.getElementById('zooFilter').value;
         
-        const filtered = koalaData.filter(koala => {
+        // 何も入力がない時は「おすすめ」に戻す？
+        // いや、検索ボックスを触ったら全リストから探したいはずなので全件対象にする
+        if (textInput === '' && zooSelect === '') {
+            document.getElementById('recommendTitle').style.display = 'block'; // おすすめタイトル出す
+            showRandomKoalas(3); // またランダム3頭に戻す（または全件出しても良いですが、おすすめに戻します）
+            return;
+        }
+
+        // 検索中は「おすすめ」タイトルを隠す
+        document.getElementById('recommendTitle').style.display = 'none';
+
+        let filtered = koalaData.filter(koala => {
             const matchesText = (koala.name + koala.memo).toLowerCase().includes(textInput);
             const matchesZoo = zooSelect === "" || koala.zoo === zooSelect;
             return matchesText && matchesZoo;
         });
         
+        // ★ ここで並び替え（存命 -> 天国）
+        filtered = sortKoalasByLife(filtered);
+
         renderKoalas(filtered);
     }
 
