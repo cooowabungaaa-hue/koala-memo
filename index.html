@@ -7,40 +7,58 @@
     
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#2e7d32">
-    <link rel="apple-touch-koalaface" href="koalaface.png">
+    <link rel="apple-touch-icon" href="koalaface.png">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
 
     <style>
-        /* デザインの設定（ユーカリ色とコアラ色） */
+        /* ▼ デザインの設定（ユーカリ色とコアラ色） */
         body {
             font-family: "Helvetica Neue", Arial, sans-serif;
             background-color: #f4f7f6;
             color: #333;
             margin: 0;
             padding: 20px;
-            /* iPhoneの切り欠き対策 */
-            padding-top: env(safe-area-inset-top);
+            padding-top: env(safe-area-inset-top); /* iPhone対策 */
         }
+
         header {
             text-align: center;
             margin-bottom: 30px;
         }
+
         h1 {
             color: #2e7d32;
-        }
-        .search-box {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-        input[type="text"] {
-            padding: 10px;
-            width: 80%;
-            max-width: 400px;
-            border: 2px solid #ddd;
-            border-radius: 5px;
-            font-size: 16px;
+            margin-bottom: 5px;
         }
         
-        /* コアラカードのレイアウト */
+        p.subtitle {
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 0;
+        }
+
+        /* 検索ボックス */
+        .search-box {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        input[type="text"] {
+            padding: 12px;
+            width: 85%;
+            max-width: 400px;
+            border: 2px solid #ddd;
+            border-radius: 25px; /* 丸みをつける */
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        input[type="text"]:focus {
+            border-color: #2e7d32;
+        }
+        
+        /* コアラリストのグリッド表示 */
         .koala-list {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -48,35 +66,86 @@
             max-width: 1000px;
             margin: 0 auto;
         }
+
+        /* コアラカードのデザイン */
         .koala-card {
             background: white;
             padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            border-left: 5px solid #2e7d32;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            border-left: 5px solid #2e7d32; /* 左の緑ライン */
+            transition: transform 0.2s;
         }
+        
+        .koala-card:active {
+            transform: scale(0.98); /* タップした時の動き */
+        }
+
+        .koala-header {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
         .koala-name {
-            font-size: 1.5em;
+            font-size: 1.4em;
             font-weight: bold;
-            margin: 0 0 10px 0;
-            color: #444;
+            color: #333;
+            margin: 0;
         }
+
+        /* ▼ バッジ（性別や年齢） */
+        .badge {
+            font-size: 0.75em;
+            padding: 3px 8px;
+            border-radius: 12px;
+            color: white;
+            font-weight: normal;
+            display: inline-block;
+            vertical-align: middle;
+        }
+        .male { background-color: #4A90E2; }   /* オス：青 */
+        .female { background-color: #E24A8D; } /* メス：ピンク */
+        .other { background-color: #999; }     /* 不明：グレー */
+        .age { background-color: #2ecc71; color: #fff; } /* 年齢：緑 */
+
         .koala-zoo {
+            display: inline-block;
             background-color: #e8f5e9;
             color: #2e7d32;
-            padding: 3px 8px;
+            padding: 4px 10px;
             border-radius: 4px;
             font-size: 0.9em;
-            display: inline-block;
-            margin-bottom: 10px;
-        }
-        .koala-info {
-            font-size: 0.95em;
-            line-height: 1.6;
-        }
-        .label {
             font-weight: bold;
-            color: #666;
+            margin-bottom: 12px;
+        }
+
+        /* 詳細情報のレイアウト */
+        .detail-grid {
+            display: grid;
+            grid-template-columns: auto 1fr; /* ラベルと中身 */
+            gap: 5px 10px;
+            font-size: 0.95em;
+            color: #444;
+        }
+        
+        .label-icon {
+            color: #888;
+            width: 20px;
+            text-align: center;
+        }
+
+        /* メモ欄 */
+        .memo-text {
+            margin-top: 12px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 6px;
+            font-size: 0.9em;
+            color: #555;
+            line-height: 1.5;
         }
     </style>
 </head>
@@ -84,7 +153,7 @@
 
 <header>
     <h1>🐨 国内コアラ名鑑</h1>
-    <p>国内動物園で飼育されているコアラのデータベース</p>
+    <p class="subtitle">Search & Database</p>
 </header>
 
 <div class="search-box">
@@ -92,68 +161,102 @@
 </div>
 
 <div id="koalaList" class="koala-list">
-    </div>
+    <p style="text-align:center; color:#999;">データを読み込んでいます...</p>
+</div>
 
 <script>
+    // ▼▼▼ コアラデータ（最初は空っぽ） ▼▼▼
+    let koalaData = [];
 
-    // ▼▼▼ コアラデータ ▼▼▼
-    const koalaData = [
-        {
-            name: "ししお",
-            zoo: "東山",
-            birthday: "2022/4/4",
-            parents: "父：タイチ / 母：ホリー",
-            death: "", 
-            move: "なし"
-        },
-        {
-            name: "あああ",
-            zoo: "××動植物園",
-            birthday: "2018-12-10",
-            parents: "父：不明 / 母：サクラ",
-            death: "",
-            move: "なし"
-        },
-        {
-            name: "レジェンド・コアラ",
-            zoo: "メモリアルパーク",
-            birthday: "2000-01-01",
-            parents: "父：豪州太郎 / 母：ビクトリア",
-            death: "2015-08-15",
-            move: "2002年来日"
-        }
-    ];
+    // ▼▼▼ スプレッドシートからデータを読み込む処理 ▼▼▼
+    function loadFromSpreadsheet() {
+        // ★★★重要：ここにコピーしたURLを貼り付けてください！★★★
+        const sheetUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQi6GZ0pWmE1A0MSJBoSyHYaKvAHkgFeBRvZPmMHqHLBh53VzAr5nyJ43qOVuTj4y2xus5nzzurKmUX/pub?gid=107153803&single=true&output=csv";
 
+        Papa.parse(sheetUrl, {
+            download: true,
+            header: true,
+            complete: function(results) {
+                // データの読み込み成功！
+                koalaData = results.data;
+                // 空行や名前がない行を除外
+                koalaData = koalaData.filter(item => item.name && item.name !== "");
+                
+                console.log("読み込み完了:", koalaData);
+                // 画面に表示
+                renderKoalas(koalaData);
+            },
+            error: function(err) {
+                console.log("読み込みエラー:", err);
+                document.getElementById('koalaList').innerHTML = '<p>データの読み込みに失敗しました。</p>';
+            }
+        });
+    }
+
+    // ▼▼▼ カードを表示する機能 ▼▼▼
     function renderKoalas(data) {
         const list = document.getElementById('koalaList');
-        list.innerHTML = ''; 
+        list.innerHTML = ''; // 一度リセット
+
+        if (data.length === 0) {
+            list.innerHTML = '<p style="text-align:center;">該当するコアラが見つかりません</p>';
+            return;
+        }
+
         data.forEach(koala => {
-            const status = koala.death ? `<span style="color:gray;">(🌈 ${koala.death})</span>` : '';
+            // 性別判定（オス/メス/その他）
+            let genderClass = 'other';
+            if (koala.gender && koala.gender.includes('オス')) genderClass = 'male';
+            if (koala.gender && koala.gender.includes('メス')) genderClass = 'female';
+
+            // メモがある時だけHTMLを作る
+            const memoHtml = koala.memo ? `<div class="memo-text">${koala.memo}</div>` : '';
+
+            // カードのHTMLを作成
             const html = `
                 <div class="koala-card">
-                    <div class="koala-name">${koala.name} ${status}</div>
-                    <div class="koala-zoo">${koala.zoo}</div>
-                    <div class="koala-info">
-                        <div><span class="label">誕生日:</span> ${koala.birthday}</div>
-                        <div><span class="label">両親:</span> ${koala.parents}</div>
-                        <div><span class="label">移動歴:</span> ${koala.move}</div>
+                    <div class="koala-header">
+                        <div class="koala-name">${koala.name}</div>
+                        <span class="badge ${genderClass}">${koala.gender || "不明"}</span>
+                        <span class="badge age">${koala.age || "-"}</span>
                     </div>
+
+                    <div class="koala-zoo">📍 ${koala.zoo}</div>
+
+                    <div class="detail-grid">
+                        <span class="label-icon">🎂</span>
+                        <span>${koala.birthday}</span>
+
+                        <span class="label-icon">🐨</span>
+                        <span>父：${koala.father || "-"}</span>
+
+                        <span class="label-icon">🐨</span>
+                        <span>母：${koala.mother || "-"}</span>
+                    </div>
+                    
+                    ${memoHtml}
                 </div>
             `;
             list.innerHTML += html;
         });
     }
 
+    // ▼▼▼ 検索機能 ▼▼▼
     function filterKoalas() {
         const input = document.getElementById('searchInput').value.toLowerCase();
-        const filtered = koalaData.filter(koala => 
-            koala.name.toLowerCase().includes(input) || 
-            koala.zoo.toLowerCase().includes(input)
-        );
+        
+        const filtered = koalaData.filter(koala => {
+            // 名前、動物園、メモの内容で検索できるようにする
+            const searchTarget = (koala.name + koala.zoo + koala.memo).toLowerCase();
+            return searchTarget.includes(input);
+        });
+        
         renderKoalas(filtered);
     }
 
-    renderKoalas(koalaData);
+    // ページが開いたら読み込み開始
+    window.addEventListener('load', loadFromSpreadsheet);
+
 </script>
 
 </body>
