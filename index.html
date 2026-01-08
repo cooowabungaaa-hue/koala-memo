@@ -198,20 +198,20 @@
 <script>
     let koalaData = [];
 
-    // ▼ 動物園URLリスト
+    // ▼ 動物園URLリスト（表記ゆれ対応版）
     const zooUrls = {
         "東山": "https://www.higashiyama.city.nagoya.jp/", "東山動植物園": "https://www.higashiyama.city.nagoya.jp/",
         "多摩": "https://www.tokyo-zoo.net/zoo/tama/", "多摩動物公園": "https://www.tokyo-zoo.net/zoo/tama/",
         "埼玉": "https://www.parks.or.jp/sczoo/", "埼玉県こども": "https://www.parks.or.jp/sczoo/", "埼玉県こども動物自然公園": "https://www.parks.or.jp/sczoo/",
         "平川": "https://hirakawazoo.jp/", "平川動物公園": "https://hirakawazoo.jp/",
-        "金沢": "https://www.hama-midorinokyokai.or.jp/zoo/kanazawa/", "横浜金沢": "https://www.hama-midorinokyokai.or.jp/zoo/kanazawa/", "金沢動物園": "https://www.hama-midorinokyokai.or.jp/zoo/kanazawa/",
+        "金沢": "https://www.hama-midorinokyokai.or.jp/zoo/kanazawa/", "横浜金沢": "https://www.hama-midorinokyokai.or.jp/zoo/kanazawa/", "金沢動物園": "https://www.hama-midorinokyokai.or.jp/zoo/kanazawa/", "横浜市立金沢動物園": "https://www.hama-midorinokyokai.or.jp/zoo/kanazawa/",
         "王子": "https://www.kobe-ojizoo.jp/", "神戸市王子": "https://www.kobe-ojizoo.jp/", "神戸市立王子動物園": "https://www.kobe-ojizoo.jp/",
         "淡路": "https://www.england-hill.com/", "イングランドの丘": "https://www.england-hill.com/",
         "天王寺": "https://www.tennojizoo.jp/", "天王寺動物園": "https://www.tennojizoo.jp/"
     };
 
     function loadFromSpreadsheet() {
-        // ★ ここにURLを貼り付け（前回と同じでOK）
+        // ★ ご指定のURLを設定済みです
         const sheetUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQi6GZ0pWmE1A0MSJBoSyHYaKvAHkgFeBRvZPmMHqHLBh53VzAr5nyJ43qOVuTj4y2xus5nzzurKmUX/pub?gid=107153803&single=true&output=csv";
 
         Papa.parse(sheetUrl, {
@@ -228,6 +228,7 @@
             },
             error: function(err) {
                 console.log("エラー:", err);
+                document.getElementById('loadingMsg').textContent = 'データの読み込みに失敗しました。';
             }
         });
     }
@@ -249,34 +250,39 @@
         const parent = koalaData.find(k => k.id === koalaId);
         if (!parent) return;
 
-        // 2. 子供たちを探す（mother_id か father_id が親のIDと一致する子）
-        // ※ IDがない場合は検索しないようにガードする
+        // 2. 子供たちを探す
         let children = koalaData.filter(k => {
             return (k.mother_id && k.mother_id === koalaId) || 
                    (k.father_id && k.father_id === koalaId);
         });
 
         // 3. 画面の表示切替
-        document.getElementById('birthdaySection').style.display = 'none'; // 誕生日隠す
-        document.getElementById('searchContainer').style.display = 'none'; // 検索隠す
-        document.getElementById('backButton').style.display = 'block'; // 戻るボタン出す
+        document.getElementById('birthdaySection').style.display = 'none';
+        document.getElementById('searchContainer').style.display = 'none';
+        document.getElementById('backButton').style.display = 'block';
         
         const list = document.getElementById('koalaList');
         const title = document.getElementById('listTitle');
         list.innerHTML = '';
         
-        // タイトル設定
         title.style.display = 'block';
         title.innerHTML = `👶 ${parent.name} のこどもたち (${children.length}頭)`;
         list.appendChild(title);
 
-        // 親カード（大きく特別表示）
         renderCard(parent, list, true);
 
         // 子供たちを表示
         if (children.length > 0) {
-            // 年齢順（若い順）にならべる
-            children.sort((a, b) => new Date(b.birthday) - new Date(a.birthday));
+            // ★ 日付順（生まれた順＝古い順）に並び替え
+            children.sort((a, b) => {
+                const dateA = new Date(a.birthday);
+                const dateB = new Date(b.birthday);
+                // 日付が不正なデータは後ろへ
+                if (isNaN(dateA.getTime())) return 1;
+                if (isNaN(dateB.getTime())) return -1;
+                // 古い順（第一子から）
+                return dateA - dateB;
+            });
             
             children.forEach(child => {
                 renderCard(child, list);
@@ -334,7 +340,6 @@
         const title = document.getElementById('listTitle');
         const loader = document.getElementById('loadingMsg');
         
-        // 初期化
         list.innerHTML = '';
         list.appendChild(title);
         list.appendChild(loader);
@@ -352,20 +357,17 @@
         });
     }
 
-    // ... (既存の関数: populateZooFilter, sortKoalasByLife, showBirthdayKoalas) ...
-    // ※文字数制限のため、ここから下の既存関数は前のコードと同じロジックです。
-    // ※ただし、renderCardを共通化したので、下記のように短く書き換えます。
-
     function populateZooFilter() {
         const zoos = [...new Set(koalaData.map(k => k.zoo).filter(z => z))].sort();
         const select = document.getElementById('zooFilter');
-        select.innerHTML = '<option value="">全ての動物園</option>'; // リセット
+        select.innerHTML = '<option value="">全ての動物園</option>'; 
         zoos.forEach(zoo => {
             const option = document.createElement('option');
             option.value = zoo; option.textContent = zoo; select.appendChild(option);
         });
     }
 
+    // 生死順（存命が先）
     function sortKoalasByLife(list) {
         return list.sort((a, b) => {
             const aIsDead = (a.death && a.death !== "");
@@ -401,7 +403,6 @@
             const nameSuffix = isDead ? ' (🌈)' : '';
             const div = document.createElement('div');
             div.className = `birthday-card ${deadClass}`;
-            // 誕生日カードクリックでも家族が見れるように！
             div.innerHTML = `
                 <div style="font-weight:bold; font-size:1.1em; cursor:pointer;" onclick="showFamily('${koala.id}')">${koala.name}${nameSuffix}</div>
                 <div style="font-size:0.8em; color:#666;">${koala.zoo}</div>
