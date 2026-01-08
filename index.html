@@ -244,19 +244,47 @@
     // ▼▼▼ コアラデータ（最初は空っぽ） ▼▼▼
     let koalaData = [];
 
-    // ▼▼▼ 動物園の公式サイトURLリスト（ここに追加・編集できます） ▼▼▼
-    // ※スプレッドシートの動物園名と完全に一致させてください
+    // ▼▼▼ 動物園の// ▼▼▼ 動物園の公式サイトURLリスト（ここに追加・編集できます） ▼▼▼
+    // ※スプレッドシートの「zoo」列にある名前がここに含まれていないとリンクになりません
     const zooUrls = {
+        // --- 東山 ---
         "東山": "https://www.higashiyama.city.nagoya.jp/",
+        "東山動植物園": "https://www.higashiyama.city.nagoya.jp/",
+        "名古屋市東山動植物園": "https://www.higashiyama.city.nagoya.jp/",
+        
+        // --- 多摩 ---
         "多摩": "https://www.tokyo-zoo.net/zoo/tama/",
-        "埼玉県こども": "https://www.parks.or.jp/sczoo/",
+        "多摩動物公園": "https://www.tokyo-zoo.net/zoo/tama/",
+        
+        // --- 埼玉 ---
         "埼玉": "https://www.parks.or.jp/sczoo/",
+        "埼玉県こども": "https://www.parks.or.jp/sczoo/",
+        "埼玉県こども動物自然公園": "https://www.parks.or.jp/sczoo/",
+        
+        // --- 平川 ---
         "平川": "https://hirakawazoo.jp/",
+        "平川動物公園": "https://hirakawazoo.jp/",
+        "鹿児島市平川動物公園": "https://hirakawazoo.jp/",
+        
+        // --- 金沢 ---
         "金沢": "https://www.hama-midorinokyokai.or.jp/zoo/kanazawa/",
+        "横浜金沢": "https://www.hama-midorinokyokai.or.jp/zoo/kanazawa/",
+        "金沢動物園": "https://www.hama-midorinokyokai.or.jp/zoo/kanazawa/",
+        "横浜市立金沢動物園": "https://www.hama-midorinokyokai.or.jp/zoo/kanazawa/",
+        
+        // --- 王子 ---
         "王子": "https://www.kobe-ojizoo.jp/",
-        "神戸市立王子": "https://www.kobe-ojizoo.jp/",
+        "神戸王子": "https://www.kobe-ojizoo.jp/",
+        "神戸市立王子動物園": "https://www.kobe-ojizoo.jp/",
+        
+        // --- 淡路 ---
         "淡路": "https://www.england-hill.com/",
-        "天王寺": "https://www.tennojizoo.jp/"
+        "イングランドの丘": "https://www.england-hill.com/",
+        "淡路ファームパーク": "https://www.england-hill.com/",
+        
+        // --- 天王寺 ---
+        "天王寺": "https://www.tennojizoo.jp/",
+        "天王寺動物園": "https://www.tennojizoo.jp/"
     };
 
     // ▼▼▼ スプレッドシート読み込み ▼▼▼
