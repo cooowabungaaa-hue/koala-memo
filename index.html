@@ -228,6 +228,11 @@
         });
     }
 
+    // ▼ 生死判定ロジック（ここを修正：death列があるか、ageが「没年齢不明」なら死亡扱い）
+    function checkIsDead(koala) {
+        return (koala.death && koala.death !== "") || (koala.age === "没年齢不明");
+    }
+
     function resetApp() {
         document.getElementById('backButton').style.display = 'none';
         document.getElementById('birthdaySection').style.display = 'block';
@@ -274,7 +279,9 @@
 
     function renderCard(koala, container, isHero = false) {
         let genderClass = (koala.gender?.includes('オス')) ? 'male' : (koala.gender?.includes('メス') ? 'female' : 'other');
-        const isDead = (koala.death && koala.death !== "");
+        
+        // ★修正：判定関数を使用
+        const isDead = checkIsDead(koala);
         const deadClass = isDead ? 'deceased-style' : '';
         const statusIcon = isDead ? '🌈 ' : '';
 
@@ -334,10 +341,11 @@
         });
     }
 
+    // ▼ 修正：生死判定に checkIsDead 関数を使用
     function sortKoalasByLife(list) {
         return list.sort((a, b) => {
-            const aDead = (a.death && a.death !== "");
-            const bDead = (b.death && b.death !== "");
+            const aDead = checkIsDead(a);
+            const bDead = checkIsDead(b);
             return aDead === bDead ? 0 : (aDead ? 1 : -1);
         });
     }
@@ -346,8 +354,7 @@
         const currentMonth = new Date().getMonth() + 1;
         const section = document.getElementById('birthdaySection');
         const list = document.getElementById('birthdayList');
-        
-        list.innerHTML = ''; // ← ここを修正しました！表示前にクリアします
+        list.innerHTML = '';
         
         document.getElementById('birthdayTitle').textContent = `🎉 今月（${currentMonth}月）のお誕生日 🎉`;
         let birthdays = koalaData.filter(k => {
@@ -362,10 +369,13 @@
 
         section.style.display = 'block';
         sortKoalasByLife(birthdays).forEach(k => {
+            // ▼ 修正：checkIsDeadを使用
+            const isDead = checkIsDead(k);
+            
             const div = document.createElement('div');
-            div.className = `birthday-card ${k.death ? 'deceased-style' : ''}`;
+            div.className = `birthday-card ${isDead ? 'deceased-style' : ''}`;
             div.innerHTML = `
-                <div style="font-weight:bold; cursor:pointer;" onclick="showFamily('${k.id}')">${k.name}${k.death ? ' (🌈)' : ''}</div>
+                <div style="font-weight:bold; cursor:pointer;" onclick="showFamily('${k.id}')">${k.name}${isDead ? ' (🌈)' : ''}</div>
                 <div style="font-size:0.8em; color:#666;">${k.zoo}</div>
                 <div style="color:#e65100; margin-top:5px;">🎂 ${k.birthday}</div>
             `;
