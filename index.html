@@ -87,7 +87,7 @@
             margin-top: 5px;
         }
 
-        /* ▼ 検索ボックスエリア（新レイアウト） */
+        /* ▼ 検索ボックスエリア */
         .search-container {
             margin-bottom: 25px;
             max-width: 600px;
@@ -396,49 +396,29 @@
         });
     }
 
-    // --- 検索機能の分離 ---
-
-    // 1. なまえで検索
     function filterByName() {
         const text = document.getElementById('searchInput').value.toLowerCase();
-        // 動物園選択をリセット
         document.getElementById('zooFilter').value = "";
-        
-        if (!text) {
-            showRandomKoalas(3);
-            return;
-        }
-        
+        if (!text) { showRandomKoalas(3); return; }
         document.getElementById('listTitle').style.display = 'block';
         document.getElementById('listTitle').textContent = `🔍 「${text}」の検索結果`;
-        
         let filtered = koalaData.filter(k => 
             (k.name + k.memo).toLowerCase().includes(text)
         );
         renderKoalas(sortKoalasByLife(filtered));
     }
 
-    // 2. 動物園で検索
     function filterByZoo() {
         const zoo = document.getElementById('zooFilter').value;
-        // 名前検索をリセット
         document.getElementById('searchInput').value = "";
-        
-        if (!zoo) {
-            showRandomKoalas(3);
-            return;
-        }
-
+        if (!zoo) { showRandomKoalas(3); return; }
         let filtered = koalaData.filter(k => k.zoo === zoo);
         let livingCount = filtered.filter(k => !checkIsDead(k)).length;
-
         document.getElementById('listTitle').style.display = 'block';
-        document.getElementById('listTitle').textContent = `📍 ${zoo}（存命：${livingCount}頭）`;
-        
+        // ここを「会える子」に変更
+        document.getElementById('listTitle').textContent = `📍 ${zoo}（会える子：${livingCount}頭）`;
         renderKoalas(sortKoalasByLife(filtered));
     }
-
-    // --- お誕生日 ---
 
     function toggleBirthdayView() {
         showDeceasedBirthday = !showDeceasedBirthday;
@@ -476,14 +456,16 @@
         });
         if (displayList.length === 0 && !showDeceasedBirthday) {
             const p = document.createElement('p');
-            p.textContent = '現在、動物園で暮らしている今月誕生日のコアラはいません';
+            // ここを優しい表現に変更
+            p.textContent = '現在、園で元気に過ごしている今月誕生日の子はいません';
             p.style.fontSize = '0.9em'; p.style.color = '#888'; p.style.width = '100%';
             list.appendChild(p);
         }
         if (deceasedBirthdays.length > 0) {
             const btn = document.createElement('button');
             btn.className = 'toggle-dead-btn';
-            btn.textContent = showDeceasedBirthday ? '✕ 存命の子のみ表示に戻す' : `🌈 虹のむこうの子（${deceasedBirthdays.length}頭）も表示`;
+            // ここも変更
+            btn.textContent = showDeceasedBirthday ? '✕ いま園にいる子のみ表示に戻す' : `🌈 虹の橋を渡った子（${deceasedBirthdays.length}頭）も表示`;
             btn.onclick = toggleBirthdayView;
             toggleContainer.appendChild(btn);
         }
