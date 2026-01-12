@@ -142,11 +142,9 @@
             font-size: 0.9em; color: #555; line-height: 1.5;
         }
 
-        /* リンク */
         a.zoo-link { text-decoration: none; color: inherit; display: inline-flex; align-items: center; gap: 5px; }
         a.zoo-link:hover { opacity: 0.7; text-decoration: underline; }
 
-        /* 親の名前リンク用 */
         .parent-link {
             color: #2e7d32;
             text-decoration: underline;
@@ -284,7 +282,6 @@
         const url = zooUrls[koala.zoo];
         if (url) zooDisplay = `<a href="${url}" target="_blank" class="zoo-link">📍 ${koala.zoo} 🔗</a>`;
 
-        // 親へのジャンプ機能付きリンク
         const fatherDisplay = koala.father_id 
             ? `<span class="parent-link" onclick="showFamily('${koala.father_id}')">${koala.father}</span>` 
             : (koala.father || "-");
@@ -330,6 +327,7 @@
     function populateZooFilter() {
         const zoos = [...new Set(koalaData.map(k => k.zoo).filter(z => z))].sort();
         const select = document.getElementById('zooFilter');
+        select.innerHTML = '<option value="">全ての動物園</option>'; 
         zoos.forEach(zoo => {
             const option = document.createElement('option');
             option.value = zoo; option.textContent = zoo; select.appendChild(option);
@@ -346,16 +344,23 @@
 
     function showBirthdayKoalas() {
         const currentMonth = new Date().getMonth() + 1;
+        const section = document.getElementById('birthdaySection');
+        const list = document.getElementById('birthdayList');
+        
+        list.innerHTML = ''; // ← ここを修正しました！表示前にクリアします
+        
         document.getElementById('birthdayTitle').textContent = `🎉 今月（${currentMonth}月）のお誕生日 🎉`;
         let birthdays = koalaData.filter(k => {
             const p = k.birthday?.split(/[-/]/);
             return p && p.length >= 2 && parseInt(p[1], 10) === currentMonth;
         });
+
         if (birthdays.length === 0) {
-            document.getElementById('birthdaySection').style.display = 'none';
+            section.style.display = 'none';
             return;
         }
-        const list = document.getElementById('birthdayList');
+
+        section.style.display = 'block';
         sortKoalasByLife(birthdays).forEach(k => {
             const div = document.createElement('div');
             div.className = `birthday-card ${k.death ? 'deceased-style' : ''}`;
@@ -386,10 +391,9 @@
         renderKoalas(sortKoalasByLife(filtered));
     }
 
-    // PWA Service Worker 登録用
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-            navigator.serviceWorker.register('sw.js').then(reg => console.log('SW registered')).catch(err => console.log('SW failed', err));
+            navigator.serviceWorker.register('sw.js').catch(err => console.log('SW failed', err));
         });
     }
 
