@@ -62,16 +62,33 @@
             margin-bottom: 30px;
             display: none;
             border: 2px solid #ffcc80;
+            text-align: center; /* ボタン中央寄せのため */
         }
         .birthday-title {
             text-align: center; color: #e65100; font-weight: bold; margin-bottom: 10px; font-size: 1.1em;
         }
         .birthday-list {
-            display: flex; overflow-x: auto; gap: 15px; padding-bottom: 5px;
+            display: flex; overflow-x: auto; gap: 15px; padding-bottom: 5px; margin-bottom: 10px;
+            text-align: left; /* カードの中身は左揃え */
         }
         .birthday-card {
             background: white; padding: 10px; border-radius: 8px; min-width: 200px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1); border-top: 4px solid #ff9800; flex-shrink: 0;
+        }
+
+        /* お誕生日切り替えボタン */
+        .toggle-dead-btn {
+            background-color: transparent;
+            border: 1px solid #e65100;
+            color: #e65100;
+            padding: 5px 15px;
+            border-radius: 15px;
+            font-size: 0.8em;
+            cursor: pointer;
+            margin-top: 5px;
+        }
+        .toggle-dead-btn:hover {
+            background-color: #ffe0b2;
         }
 
         /* ▼ 検索ボックスエリア */
@@ -180,7 +197,7 @@
 <div id="birthdaySection">
     <div class="birthday-title" id="birthdayTitle">🎉 今月のお誕生日 🎉</div>
     <div class="birthday-list" id="birthdayList"></div>
-</div>
+    <div id="birthdayToggleContainer"></div> </div>
 
 <div class="search-container" id="searchContainer">
     <div class="search-inputs">
@@ -198,6 +215,7 @@
 
 <script>
     let koalaData = [];
+    let showDeceasedBirthday = false; // お誕生日で死亡個体を表示するかどうかのフラグ
 
     const zooUrls = {
         "東山": "https://www.higashiyama.city.nagoya.jp/", "東山動植物園": "https://www.higashiyama.city.nagoya.jp/",
@@ -228,7 +246,6 @@
         });
     }
 
-    // 生死判定：death列がある、または ageが「没年齢不明」
     function checkIsDead(koala) {
         return (koala.death && koala.death !== "") || (koala.age === "没年齢不明");
     }
@@ -348,31 +365,52 @@
         });
     }
 
+    // ▼ お誕生日切り替え用関数
+    function toggleBirthdayView() {
+        showDeceasedBirthday = !showDeceasedBirthday;
+        showBirthdayKoalas();
+    }
+
     function showBirthdayKoalas() {
         const currentMonth = new Date().getMonth() + 1;
         const section = document.getElementById('birthdaySection');
         const list = document.getElementById('birthdayList');
+        const toggleContainer = document.getElementById('birthdayToggleContainer');
+        
         list.innerHTML = '';
+        toggleContainer.innerHTML = ''; // ボタンも一度リセット
         
         document.getElementById('birthdayTitle').textContent = `🎉 今月（${currentMonth}月）のお誕生日 🎉`;
-        let birthdays = koalaData.filter(k => {
+        
+        // 今月誕生日の全コアラを取得
+        let allBirthdays = koalaData.filter(k => {
             const p = k.birthday?.split(/[-/]/);
             return p && p.length >= 2 && parseInt(p[1], 10) === currentMonth;
         });
 
-        if (birthdays.length === 0) {
+        // 存命と死亡に分ける
+        const livingBirthdays = allBirthdays.filter(k => !checkIsDead(k));
+        const deceasedBirthdays = allBirthdays.filter(k => checkIsDead(k));
+
+        // 表示対象リストの決定（スイッチONなら全員、OFFなら存命のみ）
+        let displayList = showDeceasedBirthday ? allBirthdays : livingBirthdays;
+
+        // 全く誰もいない（存命も死亡もいない）場合
+        if (allBirthdays.length === 0) {
             section.style.display = 'none';
             return;
         }
 
+        // 表示するリストが空（＝存命ゼロ、死亡あり、スイッチOFFの状態）の場合のメッセージ処理は
+        // 特に今回は「ボタン」が出るので、そこで気づいてもらう形にします。
+
         section.style.display = 'block';
-        sortKoalasByLife(birthdays).forEach(k => {
+
+        // 表示処理
+        sortKoalasByLife(displayList).forEach(k => {
             const isDead = checkIsDead(k);
-            
             const div = document.createElement('div');
             div.className = `birthday-card ${isDead ? 'deceased-style' : ''}`;
-            
-            // ▼ ここに年齢表示を追加しました！
             div.innerHTML = `
                 <div style="font-weight:bold; cursor:pointer;" onclick="showFamily('${k.id}')">${k.name}${isDead ? ' (🌈)' : ''}</div>
                 <div style="font-size:0.8em; color:#666;">${k.zoo}</div>
@@ -381,6 +419,27 @@
             `;
             list.appendChild(div);
         });
+
+        // 「存命ゼロ」で「スイッチOFF」だとリストが空になるので、メッセージを出す
+        if (displayList.length === 0 && !showDeceasedBirthday) {
+            const p = document.createElement('p');
+            p.textContent = '現在、動物園で暮らしている今月誕生日のコアラはいません';
+            p.style.fontSize = '0.9em'; p.style.color = '#888'; p.style.width = '100%';
+            list.appendChild(p);
+        }
+
+        // 亡くなった子がいる場合のみ、切り替えボタンを表示
+        if (deceasedBirthdays.length > 0) {
+            const btn = document.createElement('button');
+            btn.className = 'toggle-dead-btn';
+            if (showDeceasedBirthday) {
+                btn.textContent = '✕ 存命の子のみ表示に戻す';
+            } else {
+                btn.textContent = `🌈 虹の橋を渡った子（${deceasedBirthdays.length}頭）も表示`;
+            }
+            btn.onclick = toggleBirthdayView;
+            toggleContainer.appendChild(btn);
+        }
     }
 
     function showRandomKoalas(count) {
