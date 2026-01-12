@@ -62,21 +62,20 @@
             margin-bottom: 30px;
             display: none;
             border: 2px solid #ffcc80;
-            text-align: center; /* ボタン中央寄せのため */
+            text-align: center;
         }
         .birthday-title {
             text-align: center; color: #e65100; font-weight: bold; margin-bottom: 10px; font-size: 1.1em;
         }
         .birthday-list {
             display: flex; overflow-x: auto; gap: 15px; padding-bottom: 5px; margin-bottom: 10px;
-            text-align: left; /* カードの中身は左揃え */
+            text-align: left;
         }
         .birthday-card {
             background: white; padding: 10px; border-radius: 8px; min-width: 200px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1); border-top: 4px solid #ff9800; flex-shrink: 0;
         }
 
-        /* お誕生日切り替えボタン */
         .toggle-dead-btn {
             background-color: transparent;
             border: 1px solid #e65100;
@@ -87,23 +86,46 @@
             cursor: pointer;
             margin-top: 5px;
         }
-        .toggle-dead-btn:hover {
-            background-color: #ffe0b2;
-        }
 
-        /* ▼ 検索ボックスエリア */
+        /* ▼ 検索ボックスエリア（新レイアウト） */
         .search-container {
-            background: white; padding: 15px; border-radius: 12px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 25px; text-align: center;
+            margin-bottom: 25px;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .search-group {
+            background: white;
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            margin-bottom: 12px;
+        }
+        .search-label {
+            display: block;
+            font-size: 0.85em;
+            font-weight: bold;
+            color: #2e7d32;
+            margin-bottom: 8px;
+            text-align: left;
         }
         .search-inputs {
-            display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;
+            display: flex; gap: 10px;
         }
         input[type="text"], select {
-            padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px; outline: none;
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #eee;
+            border-radius: 8px;
+            font-size: 16px;
+            outline: none;
+            box-sizing: border-box;
+            background-color: #fafafa;
         }
-        input[type="text"] { flex: 1; min-width: 200px; }
-        input[type="text"]:focus, select:focus { border-color: #2e7d32; }
+        input[type="text"]:focus, select:focus {
+            border-color: #2e7d32;
+            background-color: #fff;
+        }
 
         /* ▼ メインのコアラリスト */
         .koala-list {
@@ -197,14 +219,24 @@
 <div id="birthdaySection">
     <div class="birthday-title" id="birthdayTitle">🎉 今月のお誕生日 🎉</div>
     <div class="birthday-list" id="birthdayList"></div>
-    <div id="birthdayToggleContainer"></div> </div>
+    <div id="birthdayToggleContainer"></div>
+</div>
 
 <div class="search-container" id="searchContainer">
-    <div class="search-inputs">
-        <input type="text" id="searchInput" placeholder="名前で検索..." onkeyup="filterKoalas()">
-        <select id="zooFilter" onchange="filterKoalas()">
-            <option value="">全ての動物園</option>
-        </select>
+    <div class="search-group">
+        <label class="search-label">🔍 なまえで検索</label>
+        <div class="search-inputs">
+            <input type="text" id="searchInput" placeholder="例：こまち、ワンパン..." onkeyup="filterByName()">
+        </div>
+    </div>
+
+    <div class="search-group">
+        <label class="search-label">📍 動物園から探す</label>
+        <div class="search-inputs">
+            <select id="zooFilter" onchange="filterByZoo()">
+                <option value="">動物園を選択してください</option>
+            </select>
+        </div>
     </div>
 </div>
 
@@ -215,7 +247,7 @@
 
 <script>
     let koalaData = [];
-    let showDeceasedBirthday = false; // お誕生日で死亡個体を表示するかどうかのフラグ
+    let showDeceasedBirthday = false;
 
     const zooUrls = {
         "東山": "https://www.higashiyama.city.nagoya.jp/", "東山動植物園": "https://www.higashiyama.city.nagoya.jp/",
@@ -296,7 +328,6 @@
 
     function renderCard(koala, container, isHero = false) {
         let genderClass = (koala.gender?.includes('オス')) ? 'male' : (koala.gender?.includes('メス') ? 'female' : 'other');
-        
         const isDead = checkIsDead(koala);
         const deadClass = isDead ? 'deceased-style' : '';
         const statusIcon = isDead ? '🌈 ' : '';
@@ -350,7 +381,7 @@
     function populateZooFilter() {
         const zoos = [...new Set(koalaData.map(k => k.zoo).filter(z => z))].sort();
         const select = document.getElementById('zooFilter');
-        select.innerHTML = '<option value="">全ての動物園</option>'; 
+        select.innerHTML = '<option value="">動物園を選択してください</option>'; 
         zoos.forEach(zoo => {
             const option = document.createElement('option');
             option.value = zoo; option.textContent = zoo; select.appendChild(option);
@@ -365,7 +396,50 @@
         });
     }
 
-    // ▼ お誕生日切り替え用関数
+    // --- 検索機能の分離 ---
+
+    // 1. なまえで検索
+    function filterByName() {
+        const text = document.getElementById('searchInput').value.toLowerCase();
+        // 動物園選択をリセット
+        document.getElementById('zooFilter').value = "";
+        
+        if (!text) {
+            showRandomKoalas(3);
+            return;
+        }
+        
+        document.getElementById('listTitle').style.display = 'block';
+        document.getElementById('listTitle').textContent = `🔍 「${text}」の検索結果`;
+        
+        let filtered = koalaData.filter(k => 
+            (k.name + k.memo).toLowerCase().includes(text)
+        );
+        renderKoalas(sortKoalasByLife(filtered));
+    }
+
+    // 2. 動物園で検索
+    function filterByZoo() {
+        const zoo = document.getElementById('zooFilter').value;
+        // 名前検索をリセット
+        document.getElementById('searchInput').value = "";
+        
+        if (!zoo) {
+            showRandomKoalas(3);
+            return;
+        }
+
+        let filtered = koalaData.filter(k => k.zoo === zoo);
+        let livingCount = filtered.filter(k => !checkIsDead(k)).length;
+
+        document.getElementById('listTitle').style.display = 'block';
+        document.getElementById('listTitle').textContent = `📍 ${zoo}（存命：${livingCount}頭）`;
+        
+        renderKoalas(sortKoalasByLife(filtered));
+    }
+
+    // --- お誕生日 ---
+
     function toggleBirthdayView() {
         showDeceasedBirthday = !showDeceasedBirthday;
         showBirthdayKoalas();
@@ -376,37 +450,18 @@
         const section = document.getElementById('birthdaySection');
         const list = document.getElementById('birthdayList');
         const toggleContainer = document.getElementById('birthdayToggleContainer');
-        
         list.innerHTML = '';
-        toggleContainer.innerHTML = ''; // ボタンも一度リセット
-        
+        toggleContainer.innerHTML = '';
         document.getElementById('birthdayTitle').textContent = `🎉 今月（${currentMonth}月）のお誕生日 🎉`;
-        
-        // 今月誕生日の全コアラを取得
         let allBirthdays = koalaData.filter(k => {
             const p = k.birthday?.split(/[-/]/);
             return p && p.length >= 2 && parseInt(p[1], 10) === currentMonth;
         });
-
-        // 存命と死亡に分ける
         const livingBirthdays = allBirthdays.filter(k => !checkIsDead(k));
         const deceasedBirthdays = allBirthdays.filter(k => checkIsDead(k));
-
-        // 表示対象リストの決定（スイッチONなら全員、OFFなら存命のみ）
         let displayList = showDeceasedBirthday ? allBirthdays : livingBirthdays;
-
-        // 全く誰もいない（存命も死亡もいない）場合
-        if (allBirthdays.length === 0) {
-            section.style.display = 'none';
-            return;
-        }
-
-        // 表示するリストが空（＝存命ゼロ、死亡あり、スイッチOFFの状態）の場合のメッセージ処理は
-        // 特に今回は「ボタン」が出るので、そこで気づいてもらう形にします。
-
+        if (allBirthdays.length === 0) { section.style.display = 'none'; return; }
         section.style.display = 'block';
-
-        // 表示処理
         sortKoalasByLife(displayList).forEach(k => {
             const isDead = checkIsDead(k);
             const div = document.createElement('div');
@@ -419,24 +474,16 @@
             `;
             list.appendChild(div);
         });
-
-        // 「存命ゼロ」で「スイッチOFF」だとリストが空になるので、メッセージを出す
         if (displayList.length === 0 && !showDeceasedBirthday) {
             const p = document.createElement('p');
             p.textContent = '現在、動物園で暮らしている今月誕生日のコアラはいません';
             p.style.fontSize = '0.9em'; p.style.color = '#888'; p.style.width = '100%';
             list.appendChild(p);
         }
-
-        // 亡くなった子がいる場合のみ、切り替えボタンを表示
         if (deceasedBirthdays.length > 0) {
             const btn = document.createElement('button');
             btn.className = 'toggle-dead-btn';
-            if (showDeceasedBirthday) {
-                btn.textContent = '✕ 存命の子のみ表示に戻す';
-            } else {
-                btn.textContent = `🌈 虹の橋を渡った子（${deceasedBirthdays.length}頭）も表示`;
-            }
+            btn.textContent = showDeceasedBirthday ? '✕ 存命の子のみ表示に戻す' : `🌈 虹のむこうの子（${deceasedBirthdays.length}頭）も表示`;
             btn.onclick = toggleBirthdayView;
             toggleContainer.appendChild(btn);
         }
@@ -447,17 +494,6 @@
         document.getElementById('listTitle').style.display = 'block';
         document.getElementById('listTitle').textContent = '✨ 今日のおすすめコアラ ✨';
         renderKoalas(shuffled.slice(0, count));
-    }
-
-    function filterKoalas() {
-        const text = document.getElementById('searchInput').value.toLowerCase();
-        const zoo = document.getElementById('zooFilter').value;
-        if (!text && !zoo) { showRandomKoalas(3); return; }
-        document.getElementById('listTitle').style.display = 'none';
-        let filtered = koalaData.filter(k => 
-            (k.name + k.memo).toLowerCase().includes(text) && (!zoo || k.zoo === zoo)
-        );
-        renderKoalas(sortKoalasByLife(filtered));
     }
 
     if ('serviceWorker' in navigator) {
