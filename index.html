@@ -32,7 +32,7 @@
             color: #2e7d32;
             margin: 0;
             font-size: 1.8em;
-            cursor: pointer; /* タイトルクリックでトップに戻る */
+            cursor: pointer;
         }
         
         p.subtitle {
@@ -41,9 +41,9 @@
             margin-top: 5px;
         }
 
-        /* ▼ 戻るボタン（家族表示の時に出る） */
+        /* ▼ 戻るボタン */
         #backButton {
-            display: none; /* 最初は隠す */
+            display: none;
             margin: 0 auto 20px auto;
             background-color: #666;
             color: white;
@@ -94,13 +94,12 @@
             gap: 20px; max-width: 1000px; margin: 0 auto;
         }
 
-        /* おすすめ見出し & 家族見出し */
         .section-title {
             grid-column: 1 / -1; text-align: center; font-weight: bold; color: #2e7d32;
             margin: 10px 0; display: none; font-size: 1.2em;
         }
 
-        /* ▼ コアラカードのデザイン */
+        /* ▼ コアラカード */
         .koala-card {
             background: white; padding: 20px; border-radius: 12px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-left: 5px solid #2e7d32;
@@ -108,18 +107,15 @@
         }
         .koala-card:active { transform: scale(0.98); }
 
-        /* 天国の子用デザイン */
         .deceased-style {
             background-color: #f0f0f0; opacity: 0.9; border-color: #ccc !important; color: #666;
         }
         .deceased-style .badge.age { background-color: #999; }
         .deceased-style .koala-zoo { background-color: #eee; color: #666; }
 
-        /* 親コアラ（家族表示の時の主役）のデザイン */
         .parent-hero {
-            grid-column: 1 / -1; /* 横幅いっぱい */
+            grid-column: 1 / -1;
             background-color: #e8f5e9;
-            border-left: 8px solid #2e7d32;
             border: 2px solid #2e7d32;
         }
 
@@ -147,10 +143,17 @@
         }
 
         /* リンク */
-        a.zoo-link { text-decoration: none; color: inherit; display: inline-flex; align-items: center; gap: 5px; transition: opacity 0.2s; }
+        a.zoo-link { text-decoration: none; color: inherit; display: inline-flex; align-items: center; gap: 5px; }
         a.zoo-link:hover { opacity: 0.7; text-decoration: underline; }
 
-        /* ▼ 「子供を見る」ボタン */
+        /* 親の名前リンク用 */
+        .parent-link {
+            color: #2e7d32;
+            text-decoration: underline;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
         .family-btn {
             margin-top: 15px;
             width: 100%;
@@ -177,7 +180,7 @@
 <button id="backButton" onclick="resetApp()">← 一覧に戻る</button>
 
 <div id="birthdaySection">
-    <div class="birthday-title" id="birthdayTitle">🎉 今月（X月）のお誕生日 🎉</div>
+    <div class="birthday-title" id="birthdayTitle">🎉 今月のお誕生日 🎉</div>
     <div class="birthday-list" id="birthdayList"></div>
 </div>
 
@@ -198,7 +201,6 @@
 <script>
     let koalaData = [];
 
-    // ▼ 動物園URLリスト（表記ゆれ対応版）
     const zooUrls = {
         "東山": "https://www.higashiyama.city.nagoya.jp/", "東山動植物園": "https://www.higashiyama.city.nagoya.jp/",
         "多摩": "https://www.tokyo-zoo.net/zoo/tama/", "多摩動物公園": "https://www.tokyo-zoo.net/zoo/tama/",
@@ -211,29 +213,23 @@
     };
 
     function loadFromSpreadsheet() {
-        // ★ ご指定のURLを設定済みです
         const sheetUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQi6GZ0pWmE1A0MSJBoSyHYaKvAHkgFeBRvZPmMHqHLBh53VzAr5nyJ43qOVuTj4y2xus5nzzurKmUX/pub?gid=107153803&single=true&output=csv";
 
         Papa.parse(sheetUrl, {
             download: true, header: true,
             complete: function(results) {
-                koalaData = results.data;
-                koalaData = koalaData.filter(item => item.name && item.name !== "");
-                console.log("読み込み完了:", koalaData);
+                koalaData = results.data.filter(item => item.name && item.name !== "");
                 document.getElementById('loadingMsg').style.display = 'none';
-                
                 populateZooFilter();
                 showBirthdayKoalas();
-                showRandomKoalas(3); // 初期表示
+                showRandomKoalas(3);
             },
             error: function(err) {
-                console.log("エラー:", err);
                 document.getElementById('loadingMsg').textContent = 'データの読み込みに失敗しました。';
             }
         });
     }
 
-    // ▼ アプリを初期状態（トップ）に戻す
     function resetApp() {
         document.getElementById('backButton').style.display = 'none';
         document.getElementById('birthdaySection').style.display = 'block';
@@ -244,19 +240,14 @@
         window.scrollTo(0, 0);
     }
 
-    // ▼ 家族表示モード（IDを使って正確に検索！）
     function showFamily(koalaId) {
-        // 1. 親（自分）の情報を探す
         const parent = koalaData.find(k => k.id === koalaId);
         if (!parent) return;
 
-        // 2. 子供たちを探す
-        let children = koalaData.filter(k => {
-            return (k.mother_id && k.mother_id === koalaId) || 
-                   (k.father_id && k.father_id === koalaId);
-        });
+        let children = koalaData.filter(k => 
+            (k.mother_id && k.mother_id === koalaId) || (k.father_id && k.father_id === koalaId)
+        );
 
-        // 3. 画面の表示切替
         document.getElementById('birthdaySection').style.display = 'none';
         document.getElementById('searchContainer').style.display = 'none';
         document.getElementById('backButton').style.display = 'block';
@@ -266,55 +257,43 @@
         list.innerHTML = '';
         
         title.style.display = 'block';
-        title.innerHTML = `👶 ${parent.name} のこどもたち (${children.length}頭)`;
+        title.innerHTML = `👶 ${parent.name} の家系 (こども ${children.length}頭)`;
         list.appendChild(title);
 
         renderCard(parent, list, true);
 
-        // 子供たちを表示
         if (children.length > 0) {
-            // ★ 日付順（生まれた順＝古い順）に並び替え
-            children.sort((a, b) => {
-                const dateA = new Date(a.birthday);
-                const dateB = new Date(b.birthday);
-                // 日付が不正なデータは後ろへ
-                if (isNaN(dateA.getTime())) return 1;
-                if (isNaN(dateB.getTime())) return -1;
-                // 古い順（第一子から）
-                return dateA - dateB;
-            });
-            
-            children.forEach(child => {
-                renderCard(child, list);
-            });
+            children.sort((a, b) => new Date(a.birthday) - new Date(b.birthday));
+            children.forEach(child => renderCard(child, list));
         } else {
             const p = document.createElement('p');
             p.textContent = '記録されている子供はいません';
             p.style.textAlign = 'center'; p.style.color = '#999'; p.style.gridColumn = '1/-1';
             list.appendChild(p);
         }
-        
         window.scrollTo(0, 0);
     }
 
-    // ▼ カードを1枚作る関数（共通化）
     function renderCard(koala, container, isHero = false) {
-        let genderClass = 'other';
-        if (koala.gender && koala.gender.includes('オス')) genderClass = 'male';
-        if (koala.gender && koala.gender.includes('メス')) genderClass = 'female';
-
+        let genderClass = (koala.gender?.includes('オス')) ? 'male' : (koala.gender?.includes('メス') ? 'female' : 'other');
         const isDead = (koala.death && koala.death !== "");
         const deadClass = isDead ? 'deceased-style' : '';
         const statusIcon = isDead ? '🌈 ' : '';
 
-        // URL処理
         let zooDisplay = `📍 ${koala.zoo}`;
         const url = zooUrls[koala.zoo];
-        if (url) zooDisplay = `<a href="${url}" target="_blank" class="zoo-link">📍 ${koala.zoo} <span class="link-icon">🔗</span></a>`;
+        if (url) zooDisplay = `<a href="${url}" target="_blank" class="zoo-link">📍 ${koala.zoo} 🔗</a>`;
+
+        // 親へのジャンプ機能付きリンク
+        const fatherDisplay = koala.father_id 
+            ? `<span class="parent-link" onclick="showFamily('${koala.father_id}')">${koala.father}</span>` 
+            : (koala.father || "-");
+        const motherDisplay = koala.mother_id 
+            ? `<span class="parent-link" onclick="showFamily('${koala.mother_id}')">${koala.mother}</span>` 
+            : (koala.mother || "-");
 
         const div = document.createElement('div');
         div.className = `koala-card ${deadClass} ${isHero ? 'parent-hero' : ''}`;
-        
         div.innerHTML = `
             <div class="koala-header">
                 <div class="koala-name">${statusIcon}${koala.name}</div>
@@ -324,26 +303,20 @@
             <div class="koala-zoo">${zooDisplay}</div>
             <div class="detail-grid">
                 <span class="label-icon">🎂</span> <span>${koala.birthday}</span>
-                <span class="label-icon">🐨</span> <span>父：${koala.father || "-"}</span>
-                <span class="label-icon">🐨</span> <span>母：${koala.mother || "-"}</span>
+                <span class="label-icon">🐨</span> <span>父：${fatherDisplay}</span>
+                <span class="label-icon">🐨</span> <span>母：${motherDisplay}</span>
             </div>
             ${koala.memo ? `<div class="memo-text">${koala.memo}</div>` : ''}
-            
             ${koala.id ? `<button class="family-btn" onclick="showFamily('${koala.id}')">👶 こどもを見る</button>` : ''}
         `;
         container.appendChild(div);
     }
 
-    // ▼ 通常のリスト表示
     function renderKoalas(data) {
         const list = document.getElementById('koalaList');
         const title = document.getElementById('listTitle');
-        const loader = document.getElementById('loadingMsg');
-        
         list.innerHTML = '';
         list.appendChild(title);
-        list.appendChild(loader);
-
         if (data.length === 0) {
             const p = document.createElement('p');
             p.textContent = '該当するコアラが見つかりません';
@@ -351,63 +324,45 @@
             list.appendChild(p);
             return;
         }
-
-        data.forEach(koala => {
-            renderCard(koala, list);
-        });
+        data.forEach(koala => renderCard(koala, list));
     }
 
     function populateZooFilter() {
         const zoos = [...new Set(koalaData.map(k => k.zoo).filter(z => z))].sort();
         const select = document.getElementById('zooFilter');
-        select.innerHTML = '<option value="">全ての動物園</option>'; 
         zoos.forEach(zoo => {
             const option = document.createElement('option');
             option.value = zoo; option.textContent = zoo; select.appendChild(option);
         });
     }
 
-    // 生死順（存命が先）
     function sortKoalasByLife(list) {
         return list.sort((a, b) => {
-            const aIsDead = (a.death && a.death !== "");
-            const bIsDead = (b.death && b.death !== "");
-            if (aIsDead === bIsDead) return 0;
-            return aIsDead ? 1 : -1;
+            const aDead = (a.death && a.death !== "");
+            const bDead = (b.death && b.death !== "");
+            return aDead === bDead ? 0 : (aDead ? 1 : -1);
         });
     }
 
     function showBirthdayKoalas() {
-        const today = new Date();
-        const currentMonth = today.getMonth() + 1;
+        const currentMonth = new Date().getMonth() + 1;
         document.getElementById('birthdayTitle').textContent = `🎉 今月（${currentMonth}月）のお誕生日 🎉`;
-        
-        let birthdayKoalas = koalaData.filter(k => {
-            if (!k.birthday) return false;
-            const parts = k.birthday.split(/[-/]/); 
-            if (parts.length < 2) return false;
-            return parseInt(parts[1], 10) === currentMonth;
+        let birthdays = koalaData.filter(k => {
+            const p = k.birthday?.split(/[-/]/);
+            return p && p.length >= 2 && parseInt(p[1], 10) === currentMonth;
         });
-
-        if (birthdayKoalas.length === 0) {
-            document.getElementById('birthdaySection').style.display = 'none'; return;
+        if (birthdays.length === 0) {
+            document.getElementById('birthdaySection').style.display = 'none';
+            return;
         }
-
-        birthdayKoalas = sortKoalasByLife(birthdayKoalas);
         const list = document.getElementById('birthdayList');
-        document.getElementById('birthdaySection').style.display = 'block';
-
-        birthdayKoalas.forEach(koala => {
-            const isDead = (koala.death && koala.death !== "");
-            const deadClass = isDead ? 'deceased-style' : '';
-            const nameSuffix = isDead ? ' (🌈)' : '';
+        sortKoalasByLife(birthdays).forEach(k => {
             const div = document.createElement('div');
-            div.className = `birthday-card ${deadClass}`;
+            div.className = `birthday-card ${k.death ? 'deceased-style' : ''}`;
             div.innerHTML = `
-                <div style="font-weight:bold; font-size:1.1em; cursor:pointer;" onclick="showFamily('${koala.id}')">${koala.name}${nameSuffix}</div>
-                <div style="font-size:0.8em; color:#666;">${koala.zoo}</div>
-                <div style="color:#e65100; margin-top:5px;">🎂 ${koala.birthday}</div>
-                <div style="font-size:0.8em; margin-top:3px;">${koala.age}</div>
+                <div style="font-weight:bold; cursor:pointer;" onclick="showFamily('${k.id}')">${k.name}${k.death ? ' (🌈)' : ''}</div>
+                <div style="font-size:0.8em; color:#666;">${k.zoo}</div>
+                <div style="color:#e65100; margin-top:5px;">🎂 ${k.birthday}</div>
             `;
             list.appendChild(div);
         });
@@ -415,28 +370,27 @@
 
     function showRandomKoalas(count) {
         const shuffled = [...koalaData].sort(() => 0.5 - Math.random());
-        const selected = shuffled.slice(0, count);
         document.getElementById('listTitle').style.display = 'block';
         document.getElementById('listTitle').textContent = '✨ 今日のおすすめコアラ ✨';
-        renderKoalas(selected);
+        renderKoalas(shuffled.slice(0, count));
     }
 
     function filterKoalas() {
-        const textInput = document.getElementById('searchInput').value.toLowerCase();
-        const zooSelect = document.getElementById('zooFilter').value;
-        
-        if (textInput === '' && zooSelect === '') {
-            showRandomKoalas(3); return;
-        }
-
+        const text = document.getElementById('searchInput').value.toLowerCase();
+        const zoo = document.getElementById('zooFilter').value;
+        if (!text && !zoo) { showRandomKoalas(3); return; }
         document.getElementById('listTitle').style.display = 'none';
-        let filtered = koalaData.filter(koala => {
-            const matchesText = (koala.name + koala.memo).toLowerCase().includes(textInput);
-            const matchesZoo = zooSelect === "" || koala.zoo === zooSelect;
-            return matchesText && matchesZoo;
+        let filtered = koalaData.filter(k => 
+            (k.name + k.memo).toLowerCase().includes(text) && (!zoo || k.zoo === zoo)
+        );
+        renderKoalas(sortKoalasByLife(filtered));
+    }
+
+    // PWA Service Worker 登録用
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('sw.js').then(reg => console.log('SW registered')).catch(err => console.log('SW failed', err));
         });
-        filtered = sortKoalasByLife(filtered);
-        renderKoalas(filtered);
     }
 
     window.addEventListener('load', loadFromSpreadsheet);
