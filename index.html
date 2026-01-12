@@ -228,7 +228,7 @@
         });
     }
 
-    // ▼ 生死判定ロジック（ここを修正：death列があるか、ageが「没年齢不明」なら死亡扱い）
+    // 生死判定：death列がある、または ageが「没年齢不明」
     function checkIsDead(koala) {
         return (koala.death && koala.death !== "") || (koala.age === "没年齢不明");
     }
@@ -280,7 +280,6 @@
     function renderCard(koala, container, isHero = false) {
         let genderClass = (koala.gender?.includes('オス')) ? 'male' : (koala.gender?.includes('メス') ? 'female' : 'other');
         
-        // ★修正：判定関数を使用
         const isDead = checkIsDead(koala);
         const deadClass = isDead ? 'deceased-style' : '';
         const statusIcon = isDead ? '🌈 ' : '';
@@ -341,7 +340,6 @@
         });
     }
 
-    // ▼ 修正：生死判定に checkIsDead 関数を使用
     function sortKoalasByLife(list) {
         return list.sort((a, b) => {
             const aDead = checkIsDead(a);
@@ -369,15 +367,17 @@
 
         section.style.display = 'block';
         sortKoalasByLife(birthdays).forEach(k => {
-            // ▼ 修正：checkIsDeadを使用
             const isDead = checkIsDead(k);
             
             const div = document.createElement('div');
             div.className = `birthday-card ${isDead ? 'deceased-style' : ''}`;
+            
+            // ▼ ここに年齢表示を追加しました！
             div.innerHTML = `
                 <div style="font-weight:bold; cursor:pointer;" onclick="showFamily('${k.id}')">${k.name}${isDead ? ' (🌈)' : ''}</div>
                 <div style="font-size:0.8em; color:#666;">${k.zoo}</div>
                 <div style="color:#e65100; margin-top:5px;">🎂 ${k.birthday}</div>
+                <div style="font-size:0.8em; margin-top:3px;">${k.age}</div>
             `;
             list.appendChild(div);
         });
