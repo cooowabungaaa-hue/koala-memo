@@ -25,7 +25,6 @@
         header {
             text-align: center;
             margin-bottom: 20px;
-            position: relative;
         }
 
         h1 {
@@ -54,7 +53,7 @@
             cursor: pointer;
         }
 
-        /* ▼ 今月のお誕生日エリア */
+        /* ▼ お誕生日エリア */
         #birthdaySection {
             background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
             border-radius: 12px;
@@ -65,8 +64,32 @@
             text-align: center;
         }
         .birthday-title {
-            text-align: center; color: #e65100; font-weight: bold; margin-bottom: 10px; font-size: 1.1em;
+            text-align: center; color: #e65100; font-weight: bold; margin-bottom: 12px; font-size: 1.1em;
         }
+
+        /* 月切り替えボタン */
+        .month-tabs {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .month-btn {
+            background-color: white;
+            border: 1px solid #ffcc80;
+            color: #e65100;
+            padding: 6px 15px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .month-btn.active {
+            background-color: #e65100;
+            color: white;
+            border-color: #e65100;
+        }
+
         .birthday-list {
             display: flex; overflow-x: auto; gap: 15px; padding-bottom: 5px; margin-bottom: 10px;
             text-align: left;
@@ -218,6 +241,12 @@
 
 <div id="birthdaySection">
     <div class="birthday-title" id="birthdayTitle">🎉 今月のお誕生日 🎉</div>
+    
+    <div class="month-tabs">
+        <button id="btnCurrentMonth" class="month-btn active" onclick="changeBirthdayMonth(0)">今月</button>
+        <button id="btnNextMonth" class="month-btn" onclick="changeBirthdayMonth(1)">来月</button>
+    </div>
+
     <div class="birthday-list" id="birthdayList"></div>
     <div id="birthdayToggleContainer"></div>
 </div>
@@ -248,6 +277,7 @@
 <script>
     let koalaData = [];
     let showDeceasedBirthday = false;
+    let currentBirthdayOffset = 0; // 0なら今月、1なら来月
 
     const zooUrls = {
         "東山": "https://www.higashiyama.city.nagoya.jp/", "東山動植物園": "https://www.higashiyama.city.nagoya.jp/",
@@ -288,6 +318,8 @@
         document.getElementById('searchContainer').style.display = 'block';
         document.getElementById('searchInput').value = '';
         document.getElementById('zooFilter').value = '';
+        currentBirthdayOffset = 0; // 今月に戻す
+        showBirthdayKoalas();
         showRandomKoalas(3);
         window.scrollTo(0, 0);
     }
@@ -415,9 +447,14 @@
         let filtered = koalaData.filter(k => k.zoo === zoo);
         let livingCount = filtered.filter(k => !checkIsDead(k)).length;
         document.getElementById('listTitle').style.display = 'block';
-        // ここを「会える子」に変更
         document.getElementById('listTitle').textContent = `📍 ${zoo}（会える子：${livingCount}頭）`;
         renderKoalas(sortKoalasByLife(filtered));
+    }
+
+    // --- お誕生日月切り替え ---
+    function changeBirthdayMonth(offset) {
+        currentBirthdayOffset = offset;
+        showBirthdayKoalas();
     }
 
     function toggleBirthdayView() {
@@ -426,22 +463,48 @@
     }
 
     function showBirthdayKoalas() {
-        const currentMonth = new Date().getMonth() + 1;
+        const now = new Date();
+        const targetDate = new Date(now.getFullYear(), now.getMonth() + currentBirthdayOffset, 1);
+        const targetMonth = targetDate.getMonth() + 1;
+
         const section = document.getElementById('birthdaySection');
         const list = document.getElementById('birthdayList');
         const toggleContainer = document.getElementById('birthdayToggleContainer');
+        const titleArea = document.getElementById('birthdayTitle');
+        
+        // ボタンの見た目更新
+        document.getElementById('btnCurrentMonth').className = (currentBirthdayOffset === 0) ? 'month-btn active' : 'month-btn';
+        document.getElementById('btnNextMonth').className = (currentBirthdayOffset === 1) ? 'month-btn active' : 'month-btn';
+
         list.innerHTML = '';
         toggleContainer.innerHTML = '';
-        document.getElementById('birthdayTitle').textContent = `🎉 今月（${currentMonth}月）のお誕生日 🎉`;
+
+        if (currentBirthdayOffset === 0) {
+            titleArea.textContent = `🎉 今月（${targetMonth}月）のお誕生日 🎉`;
+        } else {
+            titleArea.textContent = `🎁 もうすぐ（${targetMonth}月）お誕生日 🎁`;
+        }
+        
         let allBirthdays = koalaData.filter(k => {
             const p = k.birthday?.split(/[-/]/);
-            return p && p.length >= 2 && parseInt(p[1], 10) === currentMonth;
+            return p && p.length >= 2 && parseInt(p[1], 10) === targetMonth;
         });
+
         const livingBirthdays = allBirthdays.filter(k => !checkIsDead(k));
         const deceasedBirthdays = allBirthdays.filter(k => checkIsDead(k));
         let displayList = showDeceasedBirthday ? allBirthdays : livingBirthdays;
-        if (allBirthdays.length === 0) { section.style.display = 'none'; return; }
+
+        // 全くいない場合でも、ボタンがあるからセクションは表示しておく
         section.style.display = 'block';
+
+        if (allBirthdays.length === 0) {
+            const p = document.createElement('p');
+            p.textContent = `${targetMonth}月にお誕生日のコアラは記録されていません`;
+            p.style.fontSize = '0.9em'; p.style.color = '#888'; p.style.width = '100%'; p.style.textAlign = 'center';
+            list.appendChild(p);
+            return;
+        }
+
         sortKoalasByLife(displayList).forEach(k => {
             const isDead = checkIsDead(k);
             const div = document.createElement('div');
@@ -454,18 +517,18 @@
             `;
             list.appendChild(div);
         });
+
         if (displayList.length === 0 && !showDeceasedBirthday) {
             const p = document.createElement('p');
-            // ここを優しい表現に変更
-            p.textContent = '現在、園で元気に過ごしている今月誕生日の子はいません';
+            p.textContent = '現在、園で元気に過ごしているお誕生日の子はいません';
             p.style.fontSize = '0.9em'; p.style.color = '#888'; p.style.width = '100%';
             list.appendChild(p);
         }
+
         if (deceasedBirthdays.length > 0) {
             const btn = document.createElement('button');
             btn.className = 'toggle-dead-btn';
-            // ここも変更
-            btn.textContent = showDeceasedBirthday ? '✕ いま園にいる子のみ表示に戻す' : `🌈 虹の橋を渡った子（${deceasedBirthdays.length}頭）も表示`;
+            btn.textContent = showDeceasedBirthday ? '✕ いま園にいる子のみ表示に戻す' : `🌈 虹のむこうの子（${deceasedBirthdays.length}頭）も表示`;
             btn.onclick = toggleBirthdayView;
             toggleContainer.appendChild(btn);
         }
