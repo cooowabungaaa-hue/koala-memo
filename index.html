@@ -245,7 +245,7 @@
         .pedigree-table {
             display: grid;
             grid-template-columns: 1fr 1fr 1fr; /* 左:祖父母、中:親、右:自分 */
-            grid-template-rows: repeat(4, 1fr);
+            grid-template-rows: repeat(4, 1fr); /* 4行固定 */
             gap: 4px; margin-top: 15px; border: 2px solid #2e7d32; background-color: #2e7d32;
         }
         .ped-cell {
@@ -253,23 +253,18 @@
             justify-content: center; align-items: center; padding: 8px 2px;
             text-align: center; font-size: 0.8em;
         }
-        /* ▼ 修正: 配置を逆転させる（grid-column指定） */
-        .ped-self { 
-            grid-column: 3; /* 自分は右端 */
-            grid-row: 1 / span 4; 
-            font-weight: bold; font-size: 1.1em; background-color: #e8f5e9; 
-        }
-        .ped-parent { 
-            grid-column: 2; /* 親は真ん中 */
-            grid-row: span 2; 
-            font-weight: bold; 
-        }
-        .ped-gparent { 
-            grid-column: 1; /* 祖父母は左端 */
-            grid-row: span 1; 
-            color: #666; font-size: 0.75em; 
-        }
+
+        /* ▼ 配置の座席指定 (Left=Grandparents, Mid=Parents, Right=Self) */
+        .ped-pos-ff { grid-column: 1; grid-row: 1; }      /* 父父 (左上) */
+        .ped-pos-fm { grid-column: 1; grid-row: 2; }      /* 父母 (左中上) */
+        .ped-pos-father { grid-column: 2; grid-row: 1 / 3; } /* 父 (中上・2行分) */
         
+        .ped-pos-mf { grid-column: 1; grid-row: 3; }      /* 母父 (左中下) */
+        .ped-pos-mm { grid-column: 1; grid-row: 4; }      /* 母母 (左下) */
+        .ped-pos-mother { grid-column: 2; grid-row: 3 / 5; } /* 母 (中下・2行分) */
+        
+        .ped-pos-self { grid-column: 3; grid-row: 1 / 5; font-size: 1.1em; background-color: #e8f5e9; font-weight: bold; } /* 自分 (右・全行) */
+
         .ped-male { border-left: 3px solid #4A90E2; }
         .ped-female { border-left: 3px solid #E24A8D; }
 
@@ -557,31 +552,34 @@
         const mf = mother ? koalaData.find(k => k.id === mother.father_id) : null;
         const mm = mother ? koalaData.find(k => k.id === mother.mother_id) : null;
 
-        const getName = (k, defaultText) => k ? k.name : (defaultText || "？");
+        const getName = (k, defaultText) => k ? k.name : (defaultText || "不明");
         const getStyle = (k) => k ? (k.gender === 'オス' ? 'ped-male' : 'ped-female') : '';
 
-        // HTML生成（CSSで配置を変えるため生成順は変更なし）
+        // HTML生成（配置はCSSの座席指定で行うため順番は自由ですが、わかりやすく記述）
         const html = `
-            <div class="ped-cell ped-self ${getStyle(self)}">
+            <div class="ped-cell ped-pos-self ${getStyle(self)}">
                 ${self.name}
             </div>
-            <div class="ped-cell ped-parent ${getStyle(father)}">
-                父：${getName(father, self.father)}
+            
+            <div class="ped-cell ped-pos-father ${getStyle(father)}">
+                ${getName(father, "不明")}
             </div>
-            <div class="ped-cell ped-gparent ${getStyle(ff)}">
-                ${getName(ff, "父父不明")}
+            
+            <div class="ped-cell ped-pos-mother ${getStyle(mother)}">
+                ${getName(mother, "不明")}
             </div>
-            <div class="ped-cell ped-gparent ${getStyle(fm)}">
-                ${getName(fm, "父母不明")}
+            
+            <div class="ped-cell ped-pos-ff ${getStyle(ff)}">
+                ${getName(ff, "不明")}
             </div>
-            <div class="ped-cell ped-parent ${getStyle(mother)}">
-                母：${getName(mother, self.mother)}
+            <div class="ped-cell ped-pos-fm ${getStyle(fm)}">
+                ${getName(fm, "不明")}
             </div>
-            <div class="ped-cell ped-gparent ${getStyle(mf)}">
-                ${getName(mf, "母父不明")}
+            <div class="ped-cell ped-pos-mf ${getStyle(mf)}">
+                ${getName(mf, "不明")}
             </div>
-            <div class="ped-cell ped-gparent ${getStyle(mm)}">
-                ${getName(mm, "母母不明")}
+            <div class="ped-cell ped-pos-mm ${getStyle(mm)}">
+                ${getName(mm, "不明")}
             </div>
         `;
 
@@ -633,8 +631,8 @@
             <div class="koala-zoo">${zooDisplay}</div>
             <div class="detail-grid">
                 <span class="label-icon">🎂</span> <span>${koala.birthday}</span>
-                <span class="label-icon">🐨</span> <span>父：${fatherDisplay}</span>
-                <span class="label-icon">🐨</span> <span>母：${motherDisplay}</span>
+                <span class="label-icon">💙</span> <span>父：${fatherDisplay}</span>
+                <span class="label-icon">🧡</span> <span>母：${motherDisplay}</span>
             </div>
             ${koala.memo ? `<div class="memo-text">${koala.memo}</div>` : ''}
             ${buttons}
