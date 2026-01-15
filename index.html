@@ -254,18 +254,15 @@
             text-align: center; font-size: 0.8em;
         }
 
-        /* ▼ 配置の座席指定 (Left=Grandparents, Mid=Parents, Right=Self) */
-        /* カラム1（左）は祖父母 */
+        /* ▼ 配置の座席指定 */
         .ped-pos-ff { grid-column: 1; grid-row: 1; }      /* 父父 */
         .ped-pos-fm { grid-column: 1; grid-row: 2; }      /* 父母 */
         .ped-pos-mf { grid-column: 1; grid-row: 3; }      /* 母父 */
         .ped-pos-mm { grid-column: 1; grid-row: 4; }      /* 母母 */
 
-        /* カラム2（中央）は両親 */
         .ped-pos-father { grid-column: 2; grid-row: 1 / 3; } /* 父 */
         .ped-pos-mother { grid-column: 2; grid-row: 3 / 5; } /* 母 */
         
-        /* カラム3（右）は自分 */
         .ped-pos-self { grid-column: 3; grid-row: 1 / 5; font-size: 1.1em; background-color: #e8f5e9; font-weight: bold; }
 
         .ped-male { border-left: 3px solid #4A90E2; }
@@ -328,7 +325,7 @@
 </div>
 
 <div id="pedigreeModal" class="modal-overlay" onclick="closeModalsFromUI(event)">
-    <div class="modal-content">
+    <div class="modal-content" onclick="event.stopPropagation()">
         <span class="close-btn" onclick="closeModalsFromUI(event, true)">×</span>
         <h2 style="text-align:center; color:#2e7d32; margin:0;">🧬 家族さん</h2>
         <div id="pedigreeChart" class="pedigree-table"></div>
@@ -336,7 +333,7 @@
 </div>
 
 <div id="siblingModal" class="modal-overlay" onclick="closeModalsFromUI(event)">
-    <div class="modal-content">
+    <div class="modal-content" onclick="event.stopPropagation()">
         <span class="close-btn" onclick="closeModalsFromUI(event, true)">×</span>
         <h2 id="siblingModalTitle" style="text-align:center; color:#2e7d32; margin:0;">🍒 きょうだい</h2>
         <div id="siblingListContent"></div>
@@ -359,7 +356,6 @@
         "天王寺": "https://www.tennojizoo.jp/", "天王寺動物園": "https://www.tennojizoo.jp/"
     };
 
-    // 初期化ロード
     function loadFromSpreadsheet() {
         const sheetUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQi6GZ0pWmE1A0MSJBoSyHYaKvAHkgFeBRvZPmMHqHLBh53VzAr5nyJ43qOVuTj4y2xus5nzzurKmUX/pub?gid=107153803&single=true&output=csv";
 
@@ -381,13 +377,13 @@
         });
     }
 
-    // ▼▼▼ ルーター（画面遷移管理の司令塔） ▼▼▼
+    // ▼▼▼ ルーター（画面遷移管理） ▼▼▼
     
     // 1. ユーザーが「戻る」ボタンを押したときに呼ばれる
     window.addEventListener('popstate', function(e) {
         const state = e.state;
 
-        // データ読み込み前ならホームに戻す安全策
+        // データ読み込み前ならホームに戻す（空白回避）
         if (koalaData.length === 0) {
              closeModals();
              resetAppUI();
@@ -404,18 +400,29 @@
         // 詳細画面への戻り
         if (state.page === 'detail' && state.id) {
             closeModals();
-            renderDetailView(state.id);
+            // try-catchでレンダリングエラー時の空白化を防ぐ
+            try {
+                renderDetailView(state.id);
+            } catch(e) {
+                console.error(e);
+                goHome();
+            }
             return;
         }
 
         // 家族（こども）一覧への戻り
         if (state.page === 'family' && state.id) {
             closeModals();
-            renderFamilyView(state.id);
+            try {
+                renderFamilyView(state.id);
+            } catch(e) {
+                console.error(e);
+                goHome();
+            }
             return;
         }
         
-        // モーダル履歴への戻り
+        // モーダル履歴への戻り（基本は閉じる）
         if (state.page === 'modal') {
              // 戻るボタンで「閉じる」のが自然なため特になにもしない
         }
@@ -423,19 +430,20 @@
 
     // 2. ユーザーがリンクをクリックしたときに呼ぶ（履歴に追加＋描画）
     
-    // 詳細へジャンプ
     function jumpToKoala(koalaId) {
         if (!koalaId) return;
         closeModals(); 
         
         const target = koalaData.find(k => k.id === koalaId);
-        if (!target) return;
+        if (!target) {
+            console.warn("Koala not found:", koalaId);
+            return;
+        }
 
         history.pushState({ page: 'detail', id: koalaId }, null, '');
         renderDetailView(koalaId);
     }
 
-    // 家族（こども）一覧へジャンプ
     function showFamily(koalaId) {
         if (!koalaId) return;
         closeModals();
@@ -444,19 +452,16 @@
         renderFamilyView(koalaId);
     }
 
-    // 家族さん（血統表）モーダルを開く
     function showPedigree(id) {
         history.pushState({ page: 'modal', id: id, type: 'pedigree' }, null, '');
         renderPedigreeModal(id);
     }
 
-    // きょうだいモーダルを開く
     function showSiblings(id) {
         history.pushState({ page: 'modal', id: id, type: 'sibling' }, null, '');
         renderSiblingsModal(id);
     }
 
-    // ホームに戻る
     function goHome() {
         history.pushState({ page: 'list' }, null, '');
         renderListView();
@@ -464,7 +469,6 @@
 
     // ▼▼▼ ビュー（実際の画面描画処理） ▼▼▼
 
-    // 一覧画面の描画
     function renderListView() {
         document.getElementById('backButton').style.display = 'none';
         document.getElementById('birthdaySection').style.display = 'block';
@@ -478,16 +482,11 @@
         
         document.getElementById('listTitle').style.display = 'block';
         document.getElementById('listTitle').textContent = '🌿 今日のおすすめコアラ 🌿';
-        const list = document.getElementById('koalaList');
     }
 
-    // 詳細画面の描画
     function renderDetailView(id) {
         const target = koalaData.find(k => k.id === id);
-        if (!target) {
-            goHome(); 
-            return;
-        }
+        if (!target) { goHome(); return; }
 
         setupDetailPageUI();
         
@@ -500,13 +499,9 @@
         window.scrollTo(0, 0);
     }
 
-    // 家族（こども）一覧画面の描画
     function renderFamilyView(id) {
         const parent = koalaData.find(k => k.id === id);
-        if (!parent) {
-            goHome();
-            return;
-        }
+        if (!parent) { goHome(); return; }
 
         setupDetailPageUI();
 
@@ -536,7 +531,6 @@
         window.scrollTo(0, 0);
     }
 
-    // 詳細ページ用のUIセットアップ
     function setupDetailPageUI() {
         document.getElementById('birthdaySection').style.display = 'none';
         document.getElementById('searchContainer').style.display = 'none';
@@ -592,7 +586,6 @@
         const self = koalaData.find(k => k.id === id);
         if (!self) return;
 
-        // タイトルの名前更新
         document.getElementById('siblingModalTitle').textContent = `🍒 ${self.name} のきょうだい`;
 
         const isValidParent = (parentId, parentName) => {
@@ -649,9 +642,10 @@
                 const genderColor = k.gender?.includes('オス') ? '#4A90E2' : (k.gender?.includes('メス') ? '#E24A8D' : '#999');
                 const row = document.createElement('div');
                 row.className = 'sibling-item';
-                // ★イベントバブリング防止 (履歴2重戻りを防ぐ)
+                // ★修正点：イベントバブリング防止をonclick属性で制御するため、ここはシンプルに
+                // 念のためJS側でもstopPropagationを入れるが、HTML側のdiv onclick="event.stopPropagation()" が最強の防壁になる
                 row.onclick = (e) => {
-                    e.stopPropagation();
+                    e.stopPropagation(); 
                     jumpToKoala(k.id);
                 }; 
                 row.innerHTML = `
@@ -671,10 +665,8 @@
     function closeModalsFromUI(e, isButton = false) {
         if (!e) return;
         
-        if (isButton) {
-            e.stopPropagation();
-        }
-
+        // ボタンまたはオーバーレイ（背景）クリックのみ反応する
+        // ※ コンテンツ部分のクリックはHTML側の onclick="event.stopPropagation()" でここに来ない
         if (e.target.className === 'modal-overlay' || e.target.className === 'close-btn' || isButton) {
             history.back();
         }
