@@ -52,13 +52,17 @@
             cursor: pointer;
         }
 
+        /* ▼ コンテンツエリア制御用のクラス */
+        .view-section {
+            display: none; /* 基本は非表示、JSで制御 */
+        }
+
         /* ▼ お誕生日エリア */
         #birthdaySection {
             background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
             border-radius: 12px;
             padding: 15px;
             margin-bottom: 30px;
-            display: none;
             border: 2px solid #ffcc80;
             text-align: center;
         }
@@ -292,49 +296,53 @@
 
 <button id="backButton" onclick="goHome()">← 一覧に戻る</button>
 
-<div id="birthdaySection">
-    <div class="birthday-title" id="birthdayTitle">🎉 今月のお誕生日 🎉</div>
-    <div class="month-tabs">
-        <button id="btnCurrentMonth" class="month-btn active" onclick="changeBirthdayMonth(0)">今月</button>
-        <button id="btnNextMonth" class="month-btn" onclick="changeBirthdayMonth(1)">来月</button>
+<div id="homeView" class="view-section">
+    <div id="birthdaySection">
+        <div class="birthday-title" id="birthdayTitle">🎉 今月のお誕生日 🎉</div>
+        <div class="month-tabs">
+            <button id="btnCurrentMonth" class="month-btn active" onclick="changeBirthdayMonth(0)">今月</button>
+            <button id="btnNextMonth" class="month-btn" onclick="changeBirthdayMonth(1)">来月</button>
+        </div>
+        <div class="birthday-list" id="birthdayList"></div>
+        <div id="birthdayToggleContainer"></div>
     </div>
-    <div class="birthday-list" id="birthdayList"></div>
-    <div id="birthdayToggleContainer"></div>
-</div>
 
-<div class="search-container" id="searchContainer">
-    <div class="search-group">
-        <label class="search-label">🔍 なまえで検索</label>
-        <div class="search-inputs">
-            <input type="text" id="searchInput" placeholder="例：こまち、きらら..." onkeyup="filterByName()">
+    <div class="search-container" id="searchContainer">
+        <div class="search-group">
+            <label class="search-label">🔍 なまえで検索</label>
+            <div class="search-inputs">
+                <input type="text" id="searchInput" placeholder="例：こまち、きらら..." onkeyup="filterByName()">
+            </div>
+        </div>
+        <div class="search-group">
+            <label class="search-label">📍 動物園から探す</label>
+            <div class="search-inputs">
+                <select id="zooFilter" onchange="filterByZoo()">
+                    <option value="">動物園を選択してください</option>
+                </select>
+            </div>
         </div>
     </div>
-    <div class="search-group">
-        <label class="search-label">📍 動物園から探す</label>
-        <div class="search-inputs">
-            <select id="zooFilter" onchange="filterByZoo()">
-                <option value="">動物園を選択してください</option>
-            </select>
-        </div>
-    </div>
 </div>
 
-<div id="koalaList" class="koala-list">
+<div id="listView" class="view-section" style="display:block;">
     <div id="listTitle" class="section-title"></div>
-    <div id="loadingMsg" style="text-align:center; color:#999; grid-column:1/-1;">データを読み込んでいます...</div>
+    <div id="koalaList" class="koala-list">
+        <div id="loadingMsg" style="text-align:center; color:#999; grid-column:1/-1;">データを読み込んでいます...</div>
+    </div>
 </div>
 
-<div id="pedigreeModal" class="modal-overlay" onclick="closeModalsFromUI(event)">
-    <div class="modal-content" onclick="event.stopImmediatePropagation()">
-        <span class="close-btn" onclick="closeModalsFromUI(event, true)">×</span>
+<div id="pedigreeModal" class="modal-overlay" onclick="closeModals()">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <span class="close-btn" onclick="closeModals()">×</span>
         <h2 style="text-align:center; color:#2e7d32; margin:0;">🧬 家族さん</h2>
         <div id="pedigreeChart" class="pedigree-table"></div>
     </div>
 </div>
 
-<div id="siblingModal" class="modal-overlay" onclick="closeModalsFromUI(event)">
-    <div class="modal-content" onclick="event.stopImmediatePropagation()">
-        <span class="close-btn" onclick="closeModalsFromUI(event, true)">×</span>
+<div id="siblingModal" class="modal-overlay" onclick="closeModals()">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <span class="close-btn" onclick="closeModals()">×</span>
         <h2 id="siblingModalTitle" style="text-align:center; color:#2e7d32; margin:0;">🍒 きょうだい</h2>
         <div id="siblingListContent"></div>
     </div>
@@ -356,22 +364,33 @@
         "天王寺": "https://www.tennojizoo.jp/", "天王寺動物園": "https://www.tennojizoo.jp/"
     };
 
+    // 初期化
     function loadFromSpreadsheet() {
         const sheetUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQi6GZ0pWmE1A0MSJBoSyHYaKvAHkgFeBRvZPmMHqHLBh53VzAr5nyJ43qOVuTj4y2xus5nzzurKmUX/pub?gid=107153803&single=true&output=csv";
 
         Papa.parse(sheetUrl, {
             download: true, header: true,
             complete: function(results) {
-                koalaData = results.data.filter(item => item.name && item.name !== "");
+                // IDを文字列に正規化して保存
+                koalaData = results.data
+                    .filter(item => item.name && item.name !== "")
+                    .map(item => {
+                        item.id = String(item.id);
+                        if(item.father_id) item.father_id = String(item.father_id);
+                        if(item.mother_id) item.mother_id = String(item.mother_id);
+                        return item;
+                    });
+
                 document.getElementById('loadingMsg').style.display = 'none';
                 populateZooFilter();
-                showBirthdayKoalas();
-                showRandomKoalas(3);
                 
-                // 初回ロード時、履歴がなければセット
+                // 初回履歴セット
                 if (!history.state) {
                     history.replaceState({ page: 'list' }, null, '');
                 }
+                
+                // 画面描画
+                processState(history.state || { page: 'list' });
             },
             error: function(err) {
                 document.getElementById('loadingMsg').textContent = 'データの読み込みに失敗しました。';
@@ -379,123 +398,118 @@
         });
     }
 
-    // ▼▼▼ ルーター（画面管理の一元化） ▼▼▼
+    // ▼▼▼ 状態管理の中枢（processState） ▼▼▼
     
-    // 戻るボタンや履歴変更を検知
     window.addEventListener('popstate', function(e) {
-        renderView(e.state);
+        processState(e.state);
     });
 
-    // 画面状態を判断して描画する司令塔関数
-    function renderView(state) {
-        // モーダルは一旦閉じる（重複防止）
-        closeModals();
+    function processState(state) {
+        // 全モーダルを強制的に閉じる（重複防止）
+        document.getElementById('pedigreeModal').style.display = 'none';
+        document.getElementById('siblingModal').style.display = 'none';
 
-        // 状態がない、またはリスト画面の場合
+        // 状態がない、またはリストの場合はホーム
         if (!state || state.page === 'list') {
-            renderListView();
+            renderHome();
             return;
         }
 
-        // データ読み込み前ならホームへ強制送還（白紙回避）
-        if (koalaData.length === 0) {
-            goHome();
-            return;
-        }
+        // データ読み込み待ち対策
+        if (koalaData.length === 0) return;
 
-        // 詳細画面
-        if (state.page === 'detail' && state.id) {
-            renderDetailView(state.id);
-            return;
-        }
-
-        // 家族（こども）一覧
-        if (state.page === 'family' && state.id) {
-            renderFamilyView(state.id);
-            return;
-        }
-        
-        // モーダル状態（ブラウザバックで戻ってきた場合などは閉じたままリストor詳細へ）
-        // 通常は history.back() で前の状態（詳細やリスト）に戻るので、ここには来ない
-        if (state.page === 'modal') {
-            // もしモーダル履歴で止まってしまった場合は、一つ戻すかホームへ
-            // 安全策としてホームへ
+        if (state.page === 'detail') {
+            renderDetail(state.id);
+        } else if (state.page === 'family') {
+            renderFamily(state.id);
+        } else if (state.page === 'modal') {
+            // モーダル履歴の場合は、戻る動作で閉じるだけなので何もしない
+            // しかしブラウザバックでここに来た場合、下の画面を表示しつつモーダルを開く必要がある
+            // 今回は簡易的にホームに戻す（整合性維持のため）
             goHome();
         }
     }
 
-    // リンククリック時の遷移関数（履歴追加して描画）
-    function navigateTo(page, id = null, type = null) {
-        const state = { page: page, id: String(id), type: type };
-        history.pushState(state, null, '');
-        renderView(state);
+    // 画面遷移関数（履歴追加）
+    function navigate(page, id) {
+        const idStr = String(id);
+        history.pushState({ page: page, id: idStr }, null, '');
+        processState({ page: page, id: idStr });
     }
 
-    // 各アクション関数（navigateToを呼ぶだけにする）
-    function jumpToKoala(koalaId) {
-        if (!koalaId) return;
-        // モーダルが開いていれば閉じる（履歴操作なし）
-        closeModals();
-        navigateTo('detail', koalaId);
+    // 各種アクション
+    function goHome() {
+        history.pushState({ page: 'list' }, null, '');
+        processState({ page: 'list' });
     }
 
-    function showFamily(koalaId) {
-        if (!koalaId) return;
-        closeModals();
-        navigateTo('family', koalaId);
+    function jumpToKoala(id) {
+        navigate('detail', id);
+    }
+
+    function showFamily(id) {
+        navigate('family', id);
     }
 
     function showPedigree(id) {
-        // モーダルは履歴に追加せず、オーバーレイ表示にする（戻るボタンで閉じる挙動を実現するため履歴追加）
-        // ただし、モーダルを開く処理は画面遷移ではないので、renderViewを経由せず直接開く＋履歴追加
-        const idStr = String(id);
-        history.pushState({ page: 'modal', id: idStr, type: 'pedigree' }, null, '');
-        renderPedigreeModal(idStr);
+        // モーダルは履歴には追加するが、画面遷移（processState）はしない
+        history.pushState({ page: 'modal', id: String(id) }, null, '');
+        renderPedigreeModal(String(id));
     }
 
     function showSiblings(id) {
-        const idStr = String(id);
-        history.pushState({ page: 'modal', id: idStr, type: 'sibling' }, null, '');
-        renderSiblingsModal(idStr);
+        history.pushState({ page: 'modal', id: String(id) }, null, '');
+        renderSiblingsModal(String(id));
     }
 
-    function goHome() {
-        // 履歴をリセットしてホームへ（replaceStateで履歴を書き換えても良いが、シンプルにpush）
-        history.pushState({ page: 'list' }, null, '');
-        renderView({ page: 'list' });
+    function closeModals() {
+        // モーダルを閉じる＝履歴を戻る
+        if (history.state && history.state.page === 'modal') {
+            history.back();
+        } else {
+            // 念のためDOMも非表示
+            document.getElementById('pedigreeModal').style.display = 'none';
+            document.getElementById('siblingModal').style.display = 'none';
+        }
     }
 
-    // ▼▼▼ ビュー描画関数 ▼▼▼
+    // ▼▼▼ 描画ロジック（DOM操作） ▼▼▼
 
-    function renderListView() {
+    function renderHome() {
+        // 表示エリアのリセット
+        document.getElementById('homeView').style.display = 'block';
+        document.getElementById('listView').style.display = 'block';
         document.getElementById('backButton').style.display = 'none';
-        document.getElementById('birthdaySection').style.display = 'block';
-        document.getElementById('searchContainer').style.display = 'block';
         
-        // 検索窓が空なら初期状態、文字があれば検索結果を表示
+        const list = document.getElementById('koalaList');
+        const title = document.getElementById('listTitle');
+        list.innerHTML = ''; // クリア
+
+        // 検索状態の復元チェック
         const searchText = document.getElementById('searchInput').value;
         const zooFilter = document.getElementById('zooFilter').value;
-        
+
         if (searchText) {
             filterByName();
         } else if (zooFilter) {
             filterByZoo();
         } else {
-            // 初期状態
-            currentBirthdayOffset = 0;
+            title.style.display = 'block';
+            title.textContent = '🌿 今日のおすすめコアラ 🌿';
             showBirthdayKoalas();
             showRandomKoalas(3);
         }
-        window.scrollTo(0, 0);
     }
 
-    function renderDetailView(id) {
-        const idStr = String(id);
-        const target = koalaData.find(k => String(k.id) === idStr);
+    function renderDetail(id) {
+        const target = koalaData.find(k => k.id === id);
         if (!target) { goHome(); return; }
 
-        setupDetailPageUI();
-        
+        // 詳細モードへ切り替え
+        document.getElementById('homeView').style.display = 'none';
+        document.getElementById('listView').style.display = 'block';
+        document.getElementById('backButton').style.display = 'block';
+
         const list = document.getElementById('koalaList');
         const title = document.getElementById('listTitle');
         list.innerHTML = '';
@@ -505,19 +519,20 @@
         window.scrollTo(0, 0);
     }
 
-    function renderFamilyView(id) {
-        const idStr = String(id);
-        const parent = koalaData.find(k => String(k.id) === idStr);
+    function renderFamily(id) {
+        const parent = koalaData.find(k => k.id === id);
         if (!parent) { goHome(); return; }
 
-        setupDetailPageUI();
+        document.getElementById('homeView').style.display = 'none';
+        document.getElementById('listView').style.display = 'block';
+        document.getElementById('backButton').style.display = 'block';
 
         const list = document.getElementById('koalaList');
         const title = document.getElementById('listTitle');
-        list.innerHTML = ''; 
+        list.innerHTML = '';
         
         let children = koalaData.filter(k => 
-            (k.mother_id && String(k.mother_id) === idStr) || (k.father_id && String(k.father_id) === idStr)
+            k.mother_id === id || k.father_id === id
         );
 
         title.style.display = 'block';
@@ -532,207 +547,52 @@
         } else {
             const p = document.createElement('p');
             p.textContent = '記録されている子供はいません';
-            p.style.textAlign = 'center'; p.style.color = '#999'; p.style.gridColumn = '1/-1';
+            p.style.textAlign = 'center'; p.style.color = '#999';
             list.appendChild(p);
         }
         window.scrollTo(0, 0);
     }
 
-    function setupDetailPageUI() {
-        document.getElementById('birthdaySection').style.display = 'none';
-        document.getElementById('searchContainer').style.display = 'none';
-        document.getElementById('backButton').style.display = 'block';
-    }
-
-    // ▼▼▼ モーダル・ポップアップ処理 ▼▼▼
-
-    function renderPedigreeModal(id) {
-        const idStr = String(id);
-        const self = koalaData.find(k => String(k.id) === idStr);
-        if (!self) return;
-
-        const father = koalaData.find(k => String(k.id) === String(self.father_id));
-        const mother = koalaData.find(k => String(k.id) === String(self.mother_id));
-        
-        const ff = father ? koalaData.find(k => String(k.id) === String(father.father_id)) : null;
-        const fm = father ? koalaData.find(k => String(k.id) === String(father.mother_id)) : null;
-        const mf = mother ? koalaData.find(k => String(k.id) === String(mother.father_id)) : null;
-        const mm = mother ? koalaData.find(k => String(k.id) === String(mother.mother_id)) : null;
-
-        const getName = (k, defaultText) => k ? k.name : (defaultText || "不明");
-        const getStyle = (k) => k ? (k.gender === 'オス' ? 'ped-male' : 'ped-female') : '';
-
-        const html = `
-            <div class="ped-cell ped-pos-self ${getStyle(self)}">
-                ${self.name}
-            </div>
-            <div class="ped-cell ped-pos-father ${getStyle(father)}">
-                ${getName(father, "不明")}
-            </div>
-            <div class="ped-cell ped-pos-mother ${getStyle(mother)}">
-                ${getName(mother, "不明")}
-            </div>
-            <div class="ped-cell ped-pos-ff ${getStyle(ff)}">
-                ${getName(ff, "不明")}
-            </div>
-            <div class="ped-cell ped-pos-fm ${getStyle(fm)}">
-                ${getName(fm, "不明")}
-            </div>
-            <div class="ped-cell ped-pos-mf ${getStyle(mf)}">
-                ${getName(mf, "不明")}
-            </div>
-            <div class="ped-cell ped-pos-mm ${getStyle(mm)}">
-                ${getName(mm, "不明")}
-            </div>
-        `;
-
-        document.getElementById('pedigreeChart').innerHTML = html;
-        document.getElementById('pedigreeModal').style.display = 'flex';
-    }
-
-    function renderSiblingsModal(id) {
-        const idStr = String(id);
-        const self = koalaData.find(k => String(k.id) === idStr);
-        if (!self) return;
-
-        document.getElementById('siblingModalTitle').textContent = `🍒 ${self.name} のきょうだい`;
-
-        const isValidParent = (parentId, parentName) => {
-            if (!parentId || !parentName) return false;
-            const ngWords = ["不明", "オージー", "未登録", "調査中"];
-            return !ngWords.some(word => parentName.includes(word));
-        };
-
-        const hasValidFather = isValidParent(self.father_id, self.father);
-        const hasValidMother = isValidParent(self.mother_id, self.mother);
-
-        let fullSiblings = [], maternalSiblings = [], paternalSiblings = [];
-
-        if (hasValidFather && hasValidMother) {
-            fullSiblings = koalaData.filter(k => String(k.id) !== idStr && String(k.father_id) === String(self.father_id) && String(k.mother_id) === String(self.mother_id));
-        }
-        if (hasValidMother) {
-            maternalSiblings = koalaData.filter(k => String(k.id) !== idStr && String(k.mother_id) === String(self.mother_id) && String(k.father_id) !== String(self.father_id));
-        }
-        if (hasValidFather) {
-            paternalSiblings = koalaData.filter(k => String(k.id) !== idStr && String(k.father_id) === String(self.father_id) && String(k.mother_id) !== String(self.mother_id));
-        }
-
-        const content = document.getElementById('siblingListContent');
-        content.innerHTML = ''; 
-
-        if (!hasValidFather && !hasValidMother) {
-            content.innerHTML = '<p style="text-align:center; color:#999; margin-top:30px;">両親の情報が記録されていない、または不明なため、きょうだいを表示できません</p>';
-        } else {
-            if (fullSiblings.length > 0) renderSiblingSection(content, `💖 全きょうだい（${self.father} & ${self.mother}）`, fullSiblings);
-            if (hasValidMother) renderSiblingSection(content, `🧡 お母さん（${self.mother}）`, maternalSiblings, "このお母さんとのきょうだいは記録されていません");
-            if (hasValidFather) renderSiblingSection(content, `💙 お父さん（${self.father}）`, paternalSiblings, "このお父さんとのきょうだいは記録されていません");
-        }
-        document.getElementById('siblingModal').style.display = 'flex';
-    }
-
-    function renderSiblingSection(container, title, list, emptyMsg = "記録なし") {
-        const section = document.createElement('div');
-        section.className = 'sibling-section';
-        const h3 = document.createElement('div');
-        h3.className = 'sibling-title';
-        h3.textContent = title;
-        section.appendChild(h3);
-
-        if (list.length === 0) {
-            const p = document.createElement('p');
-            p.style.color = '#999'; p.style.fontSize = '0.85em'; p.style.padding = '8px'; p.style.margin = '0';
-            p.textContent = emptyMsg;
-            section.appendChild(p);
-        } else {
-            list.sort((a, b) => new Date(a.birthday) - new Date(b.birthday));
-            list.forEach(k => {
-                const isDead = checkIsDead(k);
-                const genderColor = k.gender?.includes('オス') ? '#4A90E2' : (k.gender?.includes('メス') ? '#E24A8D' : '#999');
-                const row = document.createElement('div');
-                row.className = 'sibling-item';
-                // ★イベント伝播を即時停止してバグを防ぐ
-                row.onclick = (e) => {
-                    e.stopImmediatePropagation();
-                    e.preventDefault();
-                    jumpToKoala(k.id);
-                }; 
-                row.innerHTML = `
-                    <div>
-                        <div class="sibling-name"><span style="color:${genderColor};">●</span> ${k.name} ${isDead ? '<span style="font-size:0.8em">🌈</span>' : ''}</div>
-                        <div style="font-size:0.8em; color:#666;">${k.zoo}</div>
-                    </div>
-                    <div style="font-size:0.85em; color:#e65100;">${k.birthday || '-'}</div>
-                `;
-                section.appendChild(row);
-            });
-        }
-        container.appendChild(section);
-    }
-
-    // UIからのモーダル閉じる処理（履歴を戻す）
-    function closeModalsFromUI(e, isButton = false) {
-        if (!e) return;
-        if (isButton) {
-            e.stopPropagation();
-        }
-        if (e.target.className === 'modal-overlay' || e.target.className === 'close-btn' || isButton) {
-            history.back();
-        }
-    }
-
-    function closeModals() {
-        document.getElementById('pedigreeModal').style.display = 'none';
-        document.getElementById('siblingModal').style.display = 'none';
-    }
-
-    // ▼▼▼ 共通ヘルパー関数 ▼▼▼
-
-    function checkIsDead(koala) {
-        return (koala.death && koala.death !== "") || (koala.age === "没年齢不明");
-    }
+    // ▼▼▼ カード生成・各種パーツ ▼▼▼
 
     function renderCard(koala, container, isHero = false) {
-        let genderClass = (koala.gender?.includes('オス')) ? 'male' : (koala.gender?.includes('メス') ? 'female' : 'other');
-        const isDead = checkIsDead(koala);
-        const deadClass = isDead ? 'deceased-style' : '';
-        const statusIcon = isDead ? '🌈 ' : '';
+        const div = document.createElement('div');
+        div.className = `koala-card ${checkIsDead(koala) ? 'deceased-style' : ''} ${isHero ? 'parent-hero' : ''}`;
+        
+        // 性別バッジ
+        let genderClass = 'other';
+        if (koala.gender?.includes('オス')) genderClass = 'male';
+        if (koala.gender?.includes('メス')) genderClass = 'female';
 
-        let zooDisplay = `📍 ${koala.zoo}`;
-        const url = zooUrls[koala.zoo];
-        if (url) zooDisplay = `<a href="${url}" target="_blank" class="zoo-link">📍 ${koala.zoo} 🔗</a>`;
-
-        // ★親リンククリック時も伝播阻止
-        const fatherDisplay = koala.father_id 
-            ? `<span class="parent-link" onclick="event.stopImmediatePropagation(); event.preventDefault(); jumpToKoala('${koala.father_id}')">${koala.father}</span>` 
+        // リンク生成（イベントバブリング防止のため onclick で制御）
+        const fatherLink = koala.father_id 
+            ? `<span class="parent-link" onclick="event.stopPropagation(); jumpToKoala('${koala.father_id}')">${koala.father}</span>` 
             : (koala.father || "-");
-        const motherDisplay = koala.mother_id 
-            ? `<span class="parent-link" onclick="event.stopImmediatePropagation(); event.preventDefault(); jumpToKoala('${koala.mother_id}')">${koala.mother}</span>` 
+        
+        const motherLink = koala.mother_id 
+            ? `<span class="parent-link" onclick="event.stopPropagation(); jumpToKoala('${koala.mother_id}')">${koala.mother}</span>` 
             : (koala.mother || "-");
 
-        const div = document.createElement('div');
-        div.className = `koala-card ${deadClass} ${isHero ? 'parent-hero' : ''}`;
-        
-        // ★ボタンクリック時も伝播阻止
+        // ボタンエリア
         const buttons = koala.id ? `
             <div style="display:flex; gap:8px; margin-top:15px;">
-                <button class="family-btn" onclick="event.stopImmediatePropagation(); showPedigree('${koala.id}')">🧬 家族さん</button>
-                <button class="family-btn" onclick="event.stopImmediatePropagation(); showSiblings('${koala.id}')">🍒 きょうだい</button>
-                <button class="family-btn" onclick="event.stopImmediatePropagation(); showFamily('${koala.id}')">🥰 こども</button>
+                <button class="family-btn" onclick="event.stopPropagation(); showPedigree('${koala.id}')">🧬 家族さん</button>
+                <button class="family-btn" onclick="event.stopPropagation(); showSiblings('${koala.id}')">🍒 きょうだい</button>
+                <button class="family-btn" onclick="event.stopPropagation(); showFamily('${koala.id}')">🥰 こども</button>
             </div>
         ` : '';
 
         div.innerHTML = `
             <div class="koala-header">
-                <div class="koala-name">${statusIcon}${koala.name}</div>
+                <div class="koala-name">${checkIsDead(koala) ? '🌈 ' : ''}${koala.name}</div>
                 <span class="badge ${genderClass}">${koala.gender || "不明"}</span>
                 <span class="badge age">${koala.age || "-"}</span>
             </div>
-            <div class="koala-zoo">${zooDisplay}</div>
+            <div class="koala-zoo">📍 ${koala.zoo}</div>
             <div class="detail-grid">
                 <span class="label-icon">🎂</span> <span>${koala.birthday}</span>
-                <span class="label-icon">💙</span> <span>父：${fatherDisplay}</span>
-                <span class="label-icon">🧡</span> <span>母：${motherDisplay}</span>
+                <span class="label-icon">💙</span> <span>父：${fatherLink}</span>
+                <span class="label-icon">🧡</span> <span>母：${motherLink}</span>
             </div>
             ${koala.memo ? `<div class="memo-text">${koala.memo}</div>` : ''}
             ${buttons}
@@ -740,36 +600,109 @@
         container.appendChild(div);
     }
 
-    function renderKoalas(data) {
-        const list = document.getElementById('koalaList');
-        const title = document.getElementById('listTitle');
-        list.innerHTML = '';
-        list.appendChild(title);
-        if (data.length === 0) {
-            const p = document.createElement('p');
-            p.textContent = '該当するコアラが見つかりません';
-            p.style.textAlign = 'center'; p.style.gridColumn = '1/-1';
-            list.appendChild(p);
-            return;
-        }
-        data.forEach(koala => renderCard(koala, list));
+    // ▼▼▼ モーダルの中身生成 ▼▼▼
+
+    function renderPedigreeModal(id) {
+        const self = koalaData.find(k => k.id === id);
+        if (!self) return;
+
+        const getK = (i) => koalaData.find(k => k.id === i);
+        const father = getK(self.father_id);
+        const mother = getK(self.mother_id);
+        const ff = father ? getK(father.father_id) : null;
+        const fm = father ? getK(father.mother_id) : null;
+        const mf = mother ? getK(mother.father_id) : null;
+        const mm = mother ? getK(mother.mother_id) : null;
+
+        const getName = (k, def) => k ? k.name : (def || "不明");
+        const getStyle = (k) => k ? (k.gender === 'オス' ? 'ped-male' : 'ped-female') : '';
+
+        document.getElementById('pedigreeChart').innerHTML = `
+            <div class="ped-cell ped-pos-self ${getStyle(self)}">${self.name}</div>
+            <div class="ped-cell ped-pos-father ${getStyle(father)}">${getName(father, "不明")}</div>
+            <div class="ped-cell ped-pos-mother ${getStyle(mother)}">${getName(mother, "不明")}</div>
+            <div class="ped-cell ped-pos-ff ${getStyle(ff)}">${getName(ff, "不明")}</div>
+            <div class="ped-cell ped-pos-fm ${getStyle(fm)}">${getName(fm, "不明")}</div>
+            <div class="ped-cell ped-pos-mf ${getStyle(mf)}">${getName(mf, "不明")}</div>
+            <div class="ped-cell ped-pos-mm ${getStyle(mm)}">${getName(mm, "不明")}</div>
+        `;
+        document.getElementById('pedigreeModal').style.display = 'flex';
     }
+
+    function renderSiblingsModal(id) {
+        const self = koalaData.find(k => k.id === id);
+        if (!self) return;
+
+        document.getElementById('siblingModalTitle').textContent = `🍒 ${self.name} のきょうだい`;
+        const content = document.getElementById('siblingListContent');
+        content.innerHTML = '';
+
+        const hasF = (self.father_id && isValid(self.father));
+        const hasM = (self.mother_id && isValid(self.mother));
+
+        // きょうだい検索
+        const siblings = koalaData.filter(k => k.id !== id);
+        const full = siblings.filter(k => k.father_id === self.father_id && k.mother_id === self.mother_id && hasF && hasM);
+        const maternal = siblings.filter(k => k.mother_id === self.mother_id && k.father_id !== self.father_id && hasM);
+        const paternal = siblings.filter(k => k.father_id === self.father_id && k.mother_id !== self.mother_id && hasF);
+
+        if (!hasF && !hasM) {
+            content.innerHTML = '<p style="text-align:center;color:#999;margin-top:20px;">両親の情報がないため表示できません</p>';
+        } else {
+            if (full.length > 0) renderSibList(content, `💖 全きょうだい (${self.father}&${self.mother})`, full);
+            if (hasM) renderSibList(content, `🧡 お母さん (${self.mother})`, maternal, "記録なし");
+            if (hasF) renderSibList(content, `💙 お父さん (${self.father})`, paternal, "記録なし");
+        }
+        document.getElementById('siblingModal').style.display = 'flex';
+    }
+
+    function isValid(name) {
+        return name && !name.includes("不明") && !name.includes("オージー") && !name.includes("未登録");
+    }
+
+    function renderSibList(container, title, list, emptyMsg) {
+        const section = document.createElement('div');
+        section.className = 'sibling-section';
+        const h3 = document.createElement('div');
+        h3.className = 'sibling-title';
+        h3.textContent = title;
+        section.appendChild(h3);
+
+        if (list.length === 0 && emptyMsg) {
+            const p = document.createElement('p');
+            p.textContent = emptyMsg;
+            p.style.color = '#999'; p.style.fontSize = '0.85em'; p.style.padding = '5px';
+            section.appendChild(p);
+        } else {
+            list.sort((a, b) => new Date(a.birthday) - new Date(b.birthday));
+            list.forEach(k => {
+                const row = document.createElement('div');
+                row.className = 'sibling-item';
+                row.onclick = (e) => { e.stopPropagation(); jumpToKoala(k.id); };
+                row.innerHTML = `
+                    <div class="sibling-name">
+                        <span style="color:${k.gender.includes('オス')?'#4A90E2':'#E24A8D'}">●</span>
+                        ${k.name} ${checkIsDead(k)?'🌈':''}
+                    </div>
+                    <div style="font-size:0.85em;color:#e65100;">${k.birthday||'-'}</div>
+                `;
+                section.appendChild(row);
+            });
+        }
+        container.appendChild(section);
+    }
+
+    // ▼▼▼ フィルター・ユーティリティ ▼▼▼
+
+    function checkIsDead(k) { return (k.death && k.death !== "") || (k.age === "没年齢不明"); }
 
     function populateZooFilter() {
         const zoos = [...new Set(koalaData.map(k => k.zoo).filter(z => z))].sort();
         const select = document.getElementById('zooFilter');
         select.innerHTML = '<option value="">動物園を選択してください</option>'; 
-        zoos.forEach(zoo => {
-            const option = document.createElement('option');
-            option.value = zoo; option.textContent = zoo; select.appendChild(option);
-        });
-    }
-
-    function sortKoalasByLife(list) {
-        return list.sort((a, b) => {
-            const aDead = checkIsDead(a);
-            const bDead = checkIsDead(b);
-            return aDead === bDead ? 0 : (aDead ? 1 : -1);
+        zoos.forEach(z => {
+            const opt = document.createElement('option');
+            opt.value = z; opt.textContent = z; select.appendChild(opt);
         });
     }
 
@@ -777,117 +710,110 @@
         const text = document.getElementById('searchInput').value.toLowerCase();
         document.getElementById('zooFilter').value = "";
         
-        // 検索時はホーム画面（リスト）であることを保証
-        // 履歴を書き換えず、現在のViewを更新
+        // 検索時はリストビューを強制表示
+        document.getElementById('homeView').style.display = 'block';
+        document.getElementById('listView').style.display = 'block';
         document.getElementById('backButton').style.display = 'none';
-        document.getElementById('birthdaySection').style.display = 'block';
-        document.getElementById('searchContainer').style.display = 'block';
 
-        if (!text) { 
+        if (!text) {
             document.getElementById('listTitle').textContent = '🌿 今日のおすすめコアラ 🌿';
-            showRandomKoalas(3); 
-            return; 
+            showRandomKoalas(3);
+            return;
         }
         document.getElementById('listTitle').style.display = 'block';
         document.getElementById('listTitle').textContent = `🔍 「${text}」の検索結果`;
-        let filtered = koalaData.filter(k => (k.name + k.memo).toLowerCase().includes(text));
-        renderKoalas(sortKoalasByLife(filtered));
+        
+        const filtered = koalaData.filter(k => (k.name + k.memo).toLowerCase().includes(text));
+        renderListContent(filtered);
     }
 
     function filterByZoo() {
         const zoo = document.getElementById('zooFilter').value;
         document.getElementById('searchInput').value = "";
         
-        // 検索時はホーム画面であることを保証
+        document.getElementById('homeView').style.display = 'block';
+        document.getElementById('listView').style.display = 'block';
         document.getElementById('backButton').style.display = 'none';
-        document.getElementById('birthdaySection').style.display = 'block';
-        document.getElementById('searchContainer').style.display = 'block';
 
-        if (!zoo) { 
+        if (!zoo) {
             document.getElementById('listTitle').textContent = '🌿 今日のおすすめコアラ 🌿';
-            showRandomKoalas(3); 
-            return; 
+            showRandomKoalas(3);
+            return;
         }
-        let filtered = koalaData.filter(k => k.zoo === zoo);
-        let livingCount = filtered.filter(k => !checkIsDead(k)).length;
         document.getElementById('listTitle').style.display = 'block';
-        document.getElementById('listTitle').textContent = `📍 ${zoo}（会える子：${livingCount}頭）`;
-        renderKoalas(sortKoalasByLife(filtered));
+        const filtered = koalaData.filter(k => k.zoo === zoo);
+        document.getElementById('listTitle').textContent = `📍 ${zoo}（${filtered.length}頭）`;
+        renderListContent(filtered);
+    }
+
+    function renderListContent(listData) {
+        const list = document.getElementById('koalaList');
+        list.innerHTML = '';
+        const sorted = listData.sort((a, b) => {
+            const aDead = checkIsDead(a);
+            const bDead = checkIsDead(b);
+            return aDead === bDead ? 0 : (aDead ? 1 : -1);
+        });
+        sorted.forEach(k => renderCard(k, list));
+    }
+
+    function showRandomKoalas(count) {
+        const living = koalaData.filter(k => !checkIsDead(k));
+        const dead = koalaData.filter(k => checkIsDead(k));
+        let selected = [];
+        const shufLiving = [...living].sort(() => 0.5 - Math.random());
+        selected.push(...shufLiving.slice(0, 2));
+        if (dead.length > 0) selected.push(dead.sort(() => 0.5 - Math.random())[0]);
+        else if (shufLiving.length > 2) selected.push(shufLiving[2]);
+        
+        renderListContent(selected);
+    }
+
+    function showBirthdayKoalas() {
+        const now = new Date();
+        const targetMonth = new Date(now.getFullYear(), now.getMonth() + currentBirthdayOffset, 1).getMonth() + 1;
+        
+        document.getElementById('btnCurrentMonth').className = (currentBirthdayOffset === 0) ? 'month-btn active' : 'month-btn';
+        document.getElementById('btnNextMonth').className = (currentBirthdayOffset === 1) ? 'month-btn active' : 'month-btn';
+        document.getElementById('birthdayTitle').textContent = currentBirthdayOffset === 0 ? `🎉 今月（${targetMonth}月）のお誕生日 🎉` : `🎁 もうすぐ（${targetMonth}月）お誕生日 🎁`;
+
+        const list = document.getElementById('birthdayList');
+        list.innerHTML = '';
+        
+        const birthdays = koalaData.filter(k => {
+            const p = k.birthday?.split(/[-/]/);
+            return p && parseInt(p[1]) === targetMonth;
+        });
+
+        const display = showDeceasedBirthday ? birthdays : birthdays.filter(k => !checkIsDead(k));
+        
+        if (display.length === 0) {
+            list.innerHTML = `<p style="font-size:0.9em;color:#888;width:100%;text-align:center;">該当するコアラはいません</p>`;
+        } else {
+            display.forEach(k => {
+                const div = document.createElement('div');
+                div.className = `birthday-card ${checkIsDead(k) ? 'deceased-style' : ''}`;
+                div.onclick = () => jumpToKoala(k.id);
+                div.innerHTML = `<div style="font-weight:bold;">${k.name}${checkIsDead(k) ? ' (🌈)' : ''}</div><div style="font-size:0.8em;color:#666;">${k.zoo}</div><div style="color:#e65100;">🎂 ${k.birthday}</div>`;
+                list.appendChild(div);
+            });
+        }
+
+        const deadCount = birthdays.filter(k => checkIsDead(k)).length;
+        const container = document.getElementById('birthdayToggleContainer');
+        container.innerHTML = '';
+        if (deadCount > 0) {
+            const btn = document.createElement('button');
+            btn.className = 'toggle-dead-btn';
+            btn.textContent = showDeceasedBirthday ? '✕ 元気な子のみ表示' : `🌈 虹のむこうの子（${deadCount}頭）も表示`;
+            btn.onclick = () => { showDeceasedBirthday = !showDeceasedBirthday; showBirthdayKoalas(); };
+            container.appendChild(btn);
+        }
     }
 
     function changeBirthdayMonth(offset) {
         currentBirthdayOffset = offset;
         showBirthdayKoalas();
-    }
-
-    function toggleBirthdayView() {
-        showDeceasedBirthday = !showDeceasedBirthday;
-        showBirthdayKoalas();
-    }
-
-    function showBirthdayKoalas() {
-        const now = new Date();
-        const targetDate = new Date(now.getFullYear(), now.getMonth() + currentBirthdayOffset, 1);
-        const targetMonth = targetDate.getMonth() + 1;
-        const section = document.getElementById('birthdaySection');
-        const list = document.getElementById('birthdayList');
-        const toggleContainer = document.getElementById('birthdayToggleContainer');
-        const titleArea = document.getElementById('birthdayTitle');
-        document.getElementById('btnCurrentMonth').className = (currentBirthdayOffset === 0) ? 'month-btn active' : 'month-btn';
-        document.getElementById('btnNextMonth').className = (currentBirthdayOffset === 1) ? 'month-btn active' : 'month-btn';
-        list.innerHTML = '';
-        toggleContainer.innerHTML = '';
-        titleArea.textContent = currentBirthdayOffset === 0 ? `🎉 今月（${targetMonth}月）のお誕生日 🎉` : `🎁 もうすぐ（${targetMonth}月）お誕生日 🎁`;
-        let allBirthdays = koalaData.filter(k => {
-            const p = k.birthday?.split(/[-/]/);
-            return p && p.length >= 2 && parseInt(p[1], 10) === targetMonth;
-        });
-        const livingBirthdays = allBirthdays.filter(k => !checkIsDead(k));
-        const deceasedBirthdays = allBirthdays.filter(k => checkIsDead(k));
-        let displayList = showDeceasedBirthday ? allBirthdays : livingBirthdays;
-        section.style.display = 'block';
-        if (allBirthdays.length === 0) {
-            list.innerHTML = `<p style="font-size:0.9em; color:#888; width:100%; text-align:center;">${targetMonth}月にお誕生日のコアラは記録されていません</p>`;
-            return;
-        }
-        sortKoalasByLife(displayList).forEach(k => {
-            const isDead = checkIsDead(k);
-            const div = document.createElement('div');
-            div.className = `birthday-card ${isDead ? 'deceased-style' : ''}`;
-            // ★イベント伝播阻止
-            div.onclick = (e) => { e.stopImmediatePropagation(); jumpToKoala(k.id); };
-            div.innerHTML = `<div style="font-weight:bold;">${k.name}${isDead ? ' (🌈)' : ''}</div><div style="font-size:0.8em; color:#666;">${k.zoo}</div><div style="color:#e65100; margin-top:5px;">🎂 ${k.birthday}</div><div style="font-size:0.8em; margin-top:3px;">${k.age}</div>`;
-            list.appendChild(div);
-        });
-        if (displayList.length === 0 && !showDeceasedBirthday) {
-            list.innerHTML += '<p style="font-size:0.9em; color:#888; width:100%;">現在、園で元気に過ごしているお誕生日の子はいません</p>';
-        }
-        if (deceasedBirthdays.length > 0) {
-            const btn = document.createElement('button');
-            btn.className = 'toggle-dead-btn';
-            btn.textContent = showDeceasedBirthday ? '✕ いま園にいる子のみ表示に戻す' : `🌈 虹のむこうの子（${deceasedBirthdays.length}頭）も表示`;
-            btn.onclick = toggleBirthdayView;
-            toggleContainer.appendChild(btn);
-        }
-    }
-
-    function showRandomKoalas(totalCount) {
-        const livingKoalas = koalaData.filter(k => !checkIsDead(k));
-        const deceasedKoalas = koalaData.filter(k => checkIsDead(k));
-        let selected = [];
-        const shuffledLiving = [...livingKoalas].sort(() => 0.5 - Math.random());
-        selected.push(...shuffledLiving.slice(0, 2));
-
-        if (deceasedKoalas.length > 0) {
-            const shuffledDeceased = [...deceasedKoalas].sort(() => 0.5 - Math.random());
-            selected.push(shuffledDeceased[0]);
-        } else if (shuffledLiving.length > 2) {
-            selected.push(shuffledLiving[2]);
-        }
-
-        document.getElementById('listTitle').style.display = 'block';
-        document.getElementById('listTitle').textContent = '🌿 今日のおすすめコアラ 🌿';
-        renderKoalas(selected);
     }
 
     if ('serviceWorker' in navigator) {
