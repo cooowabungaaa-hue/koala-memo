@@ -338,7 +338,7 @@
 <div id="siblingModal" class="modal-overlay" onclick="closeModalsFromUI(event)">
     <div class="modal-content">
         <span class="close-btn" onclick="closeModalsFromUI(event, true)">×</span>
-        <h2 style="text-align:center; color:#2e7d32; margin:0;">🍒 きょうだい</h2>
+        <h2 id="siblingModalTitle" style="text-align:center; color:#2e7d32; margin:0;">🍒 きょうだい</h2>
         <div id="siblingListContent"></div>
     </div>
 </div>
@@ -416,9 +416,7 @@
         }
         
         // モーダル履歴への戻り
-        // 基本的には「閉じる」動作になるので、画面更新は不要
         if (state.page === 'modal') {
-             // 必要であればここでモーダル再表示ロジックを書くが
              // 戻るボタンで「閉じる」のが自然なため特になにもしない
         }
     });
@@ -487,7 +485,6 @@
     function renderDetailView(id) {
         const target = koalaData.find(k => k.id === id);
         if (!target) {
-            // データが見つからない場合（空白回避）はホームに戻す
             goHome(); 
             return;
         }
@@ -595,6 +592,9 @@
         const self = koalaData.find(k => k.id === id);
         if (!self) return;
 
+        // タイトルの名前更新
+        document.getElementById('siblingModalTitle').textContent = `🍒 ${self.name} のきょうだい`;
+
         const isValidParent = (parentId, parentName) => {
             if (!parentId || !parentName) return false;
             const ngWords = ["不明", "オージー", "未登録", "調査中"];
@@ -663,18 +663,14 @@
         container.appendChild(section);
     }
 
-    // ▼▼▼ クリックイベントの修正（ここが重要！） ▼▼▼
-    
     // UIからのモーダル閉じる処理（履歴を戻す）
     function closeModalsFromUI(e, isButton = false) {
         if (!e) return;
         
-        // ボタンが押された場合、イベントが背景（オーバーレイ）へ伝わるのを防ぐ
         if (isButton) {
             e.stopPropagation();
         }
 
-        // オーバーレイクリック、または×ボタンクリックの場合のみ閉じる
         if (e.target.className === 'modal-overlay' || e.target.className === 'close-btn' || isButton) {
             history.back();
         }
