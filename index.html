@@ -325,7 +325,7 @@
 </div>
 
 <div id="pedigreeModal" class="modal-overlay" onclick="closeModalsFromUI(event)">
-    <div class="modal-content" onclick="event.stopPropagation()">
+    <div class="modal-content" onclick="event.stopImmediatePropagation()">
         <span class="close-btn" onclick="closeModalsFromUI(event, true)">×</span>
         <h2 style="text-align:center; color:#2e7d32; margin:0;">🧬 家族さん</h2>
         <div id="pedigreeChart" class="pedigree-table"></div>
@@ -333,7 +333,7 @@
 </div>
 
 <div id="siblingModal" class="modal-overlay" onclick="closeModalsFromUI(event)">
-    <div class="modal-content" onclick="event.stopPropagation()">
+    <div class="modal-content" onclick="event.stopImmediatePropagation()">
         <span class="close-btn" onclick="closeModalsFromUI(event, true)">×</span>
         <h2 id="siblingModalTitle" style="text-align:center; color:#2e7d32; margin:0;">🍒 きょうだい</h2>
         <div id="siblingListContent"></div>
@@ -368,8 +368,10 @@
                 showBirthdayKoalas();
                 showRandomKoalas(3);
                 
-                // 履歴の初期化
-                history.replaceState({ page: 'list' }, null, '');
+                // 初回ロード時、履歴がなければセット
+                if (!history.state) {
+                    history.replaceState({ page: 'list' }, null, '');
+                }
             },
             error: function(err) {
                 document.getElementById('loadingMsg').textContent = 'データの読み込みに失敗しました。';
@@ -377,84 +379,75 @@
         });
     }
 
-    // ▼▼▼ ルーター（画面遷移管理） ▼▼▼
+    // ▼▼▼ ルーター（画面管理の一元化） ▼▼▼
     
-    // 1. ユーザーが「戻る」ボタンを押したときに呼ばれる
+    // 戻るボタンや履歴変更を検知
     window.addEventListener('popstate', function(e) {
-        const state = e.state;
+        renderView(e.state);
+    });
 
-        // データ読み込み前ならホームに戻す（空白回避）
-        if (koalaData.length === 0) {
-             closeModals();
-             resetAppUI();
-             return;
-        }
+    // 画面状態を判断して描画する司令塔関数
+    function renderView(state) {
+        // モーダルは一旦閉じる（重複防止）
+        closeModals();
 
-        // 状態がない、またはlistの場合は一覧に戻す
+        // 状態がない、またはリスト画面の場合
         if (!state || state.page === 'list') {
-            closeModals();
             renderListView();
             return;
         }
 
-        // 詳細画面への戻り
-        if (state.page === 'detail' && state.id) {
-            closeModals();
-            // try-catchでレンダリングエラー時の空白化を防ぐ
-            try {
-                renderDetailView(String(state.id)); // 文字列に統一
-            } catch(e) {
-                console.error(e);
-                goHome();
-            }
+        // データ読み込み前ならホームへ強制送還（白紙回避）
+        if (koalaData.length === 0) {
+            goHome();
             return;
         }
 
-        // 家族（こども）一覧への戻り
+        // 詳細画面
+        if (state.page === 'detail' && state.id) {
+            renderDetailView(state.id);
+            return;
+        }
+
+        // 家族（こども）一覧
         if (state.page === 'family' && state.id) {
-            closeModals();
-            try {
-                renderFamilyView(String(state.id));
-            } catch(e) {
-                console.error(e);
-                goHome();
-            }
+            renderFamilyView(state.id);
             return;
         }
         
-        // モーダル履歴への戻り（基本は閉じる）
+        // モーダル状態（ブラウザバックで戻ってきた場合などは閉じたままリストor詳細へ）
+        // 通常は history.back() で前の状態（詳細やリスト）に戻るので、ここには来ない
         if (state.page === 'modal') {
-             // 戻るボタンで「閉じる」のが自然なため特になにもしない
+            // もしモーダル履歴で止まってしまった場合は、一つ戻すかホームへ
+            // 安全策としてホームへ
+            goHome();
         }
-    });
+    }
 
-    // 2. ユーザーがリンクをクリックしたときに呼ぶ（履歴に追加＋描画）
-    
+    // リンククリック時の遷移関数（履歴追加して描画）
+    function navigateTo(page, id = null, type = null) {
+        const state = { page: page, id: String(id), type: type };
+        history.pushState(state, null, '');
+        renderView(state);
+    }
+
+    // 各アクション関数（navigateToを呼ぶだけにする）
     function jumpToKoala(koalaId) {
         if (!koalaId) return;
-        const idStr = String(koalaId); // IDを文字列化
-        closeModals(); 
-        
-        const target = koalaData.find(k => String(k.id) === idStr);
-        if (!target) {
-            console.warn("Koala not found:", idStr);
-            return;
-        }
-
-        history.pushState({ page: 'detail', id: idStr }, null, '');
-        renderDetailView(idStr);
+        // モーダルが開いていれば閉じる（履歴操作なし）
+        closeModals();
+        navigateTo('detail', koalaId);
     }
 
     function showFamily(koalaId) {
         if (!koalaId) return;
-        const idStr = String(koalaId);
         closeModals();
-
-        history.pushState({ page: 'family', id: idStr }, null, '');
-        renderFamilyView(idStr);
+        navigateTo('family', koalaId);
     }
 
     function showPedigree(id) {
+        // モーダルは履歴に追加せず、オーバーレイ表示にする（戻るボタンで閉じる挙動を実現するため履歴追加）
+        // ただし、モーダルを開く処理は画面遷移ではないので、renderViewを経由せず直接開く＋履歴追加
         const idStr = String(id);
         history.pushState({ page: 'modal', id: idStr, type: 'pedigree' }, null, '');
         renderPedigreeModal(idStr);
@@ -467,25 +460,33 @@
     }
 
     function goHome() {
+        // 履歴をリセットしてホームへ（replaceStateで履歴を書き換えても良いが、シンプルにpush）
         history.pushState({ page: 'list' }, null, '');
-        renderListView();
+        renderView({ page: 'list' });
     }
 
-    // ▼▼▼ ビュー（実際の画面描画処理） ▼▼▼
+    // ▼▼▼ ビュー描画関数 ▼▼▼
 
     function renderListView() {
         document.getElementById('backButton').style.display = 'none';
         document.getElementById('birthdaySection').style.display = 'block';
         document.getElementById('searchContainer').style.display = 'block';
-        document.getElementById('searchInput').value = '';
-        document.getElementById('zooFilter').value = '';
-        currentBirthdayOffset = 0;
-        showBirthdayKoalas();
-        showRandomKoalas(3);
-        window.scrollTo(0, 0);
         
-        document.getElementById('listTitle').style.display = 'block';
-        document.getElementById('listTitle').textContent = '🌿 今日のおすすめコアラ 🌿';
+        // 検索窓が空なら初期状態、文字があれば検索結果を表示
+        const searchText = document.getElementById('searchInput').value;
+        const zooFilter = document.getElementById('zooFilter').value;
+        
+        if (searchText) {
+            filterByName();
+        } else if (zooFilter) {
+            filterByZoo();
+        } else {
+            // 初期状態
+            currentBirthdayOffset = 0;
+            showBirthdayKoalas();
+            showRandomKoalas(3);
+        }
+        window.scrollTo(0, 0);
     }
 
     function renderDetailView(id) {
@@ -543,18 +544,16 @@
         document.getElementById('backButton').style.display = 'block';
     }
 
-    // ▼▼▼ モーダル描画処理 ▼▼▼
+    // ▼▼▼ モーダル・ポップアップ処理 ▼▼▼
 
     function renderPedigreeModal(id) {
         const idStr = String(id);
         const self = koalaData.find(k => String(k.id) === idStr);
         if (!self) return;
 
-        // ID一致で検索
         const father = koalaData.find(k => String(k.id) === String(self.father_id));
         const mother = koalaData.find(k => String(k.id) === String(self.mother_id));
         
-        // 祖父母検索
         const ff = father ? koalaData.find(k => String(k.id) === String(father.father_id)) : null;
         const fm = father ? koalaData.find(k => String(k.id) === String(father.mother_id)) : null;
         const mf = mother ? koalaData.find(k => String(k.id) === String(mother.father_id)) : null;
@@ -652,9 +651,10 @@
                 const genderColor = k.gender?.includes('オス') ? '#4A90E2' : (k.gender?.includes('メス') ? '#E24A8D' : '#999');
                 const row = document.createElement('div');
                 row.className = 'sibling-item';
-                // ★イベントバブリング防止 (履歴2重戻りを防ぐ)
+                // ★イベント伝播を即時停止してバグを防ぐ
                 row.onclick = (e) => {
-                    e.stopPropagation(); 
+                    e.stopImmediatePropagation();
+                    e.preventDefault();
                     jumpToKoala(k.id);
                 }; 
                 row.innerHTML = `
@@ -673,17 +673,14 @@
     // UIからのモーダル閉じる処理（履歴を戻す）
     function closeModalsFromUI(e, isButton = false) {
         if (!e) return;
-        
         if (isButton) {
             e.stopPropagation();
         }
-
         if (e.target.className === 'modal-overlay' || e.target.className === 'close-btn' || isButton) {
             history.back();
         }
     }
 
-    // 内部的なモーダル閉じる処理
     function closeModals() {
         document.getElementById('pedigreeModal').style.display = 'none';
         document.getElementById('siblingModal').style.display = 'none';
@@ -705,23 +702,23 @@
         const url = zooUrls[koala.zoo];
         if (url) zooDisplay = `<a href="${url}" target="_blank" class="zoo-link">📍 ${koala.zoo} 🔗</a>`;
 
-        // ★親リンクにも event.stopPropagation() を追加してバグを完全に防止
+        // ★親リンククリック時も伝播阻止
         const fatherDisplay = koala.father_id 
-            ? `<span class="parent-link" onclick="event.stopPropagation(); jumpToKoala('${koala.father_id}')">${koala.father}</span>` 
+            ? `<span class="parent-link" onclick="event.stopImmediatePropagation(); event.preventDefault(); jumpToKoala('${koala.father_id}')">${koala.father}</span>` 
             : (koala.father || "-");
         const motherDisplay = koala.mother_id 
-            ? `<span class="parent-link" onclick="event.stopPropagation(); jumpToKoala('${koala.mother_id}')">${koala.mother}</span>` 
+            ? `<span class="parent-link" onclick="event.stopImmediatePropagation(); event.preventDefault(); jumpToKoala('${koala.mother_id}')">${koala.mother}</span>` 
             : (koala.mother || "-");
 
         const div = document.createElement('div');
         div.className = `koala-card ${deadClass} ${isHero ? 'parent-hero' : ''}`;
         
-        // ★ボタンクリックも event.stopPropagation() を念のため追加
+        // ★ボタンクリック時も伝播阻止
         const buttons = koala.id ? `
             <div style="display:flex; gap:8px; margin-top:15px;">
-                <button class="family-btn" onclick="event.stopPropagation(); showPedigree('${koala.id}')">🧬 家族さん</button>
-                <button class="family-btn" onclick="event.stopPropagation(); showSiblings('${koala.id}')">🍒 きょうだい</button>
-                <button class="family-btn" onclick="event.stopPropagation(); showFamily('${koala.id}')">🥰 こども</button>
+                <button class="family-btn" onclick="event.stopImmediatePropagation(); showPedigree('${koala.id}')">🧬 家族さん</button>
+                <button class="family-btn" onclick="event.stopImmediatePropagation(); showSiblings('${koala.id}')">🍒 きょうだい</button>
+                <button class="family-btn" onclick="event.stopImmediatePropagation(); showFamily('${koala.id}')">🥰 こども</button>
             </div>
         ` : '';
 
@@ -779,7 +776,18 @@
     function filterByName() {
         const text = document.getElementById('searchInput').value.toLowerCase();
         document.getElementById('zooFilter').value = "";
-        if (!text) { showRandomKoalas(3); return; }
+        
+        // 検索時はホーム画面（リスト）であることを保証
+        // 履歴を書き換えず、現在のViewを更新
+        document.getElementById('backButton').style.display = 'none';
+        document.getElementById('birthdaySection').style.display = 'block';
+        document.getElementById('searchContainer').style.display = 'block';
+
+        if (!text) { 
+            document.getElementById('listTitle').textContent = '🌿 今日のおすすめコアラ 🌿';
+            showRandomKoalas(3); 
+            return; 
+        }
         document.getElementById('listTitle').style.display = 'block';
         document.getElementById('listTitle').textContent = `🔍 「${text}」の検索結果`;
         let filtered = koalaData.filter(k => (k.name + k.memo).toLowerCase().includes(text));
@@ -789,7 +797,17 @@
     function filterByZoo() {
         const zoo = document.getElementById('zooFilter').value;
         document.getElementById('searchInput').value = "";
-        if (!zoo) { showRandomKoalas(3); return; }
+        
+        // 検索時はホーム画面であることを保証
+        document.getElementById('backButton').style.display = 'none';
+        document.getElementById('birthdaySection').style.display = 'block';
+        document.getElementById('searchContainer').style.display = 'block';
+
+        if (!zoo) { 
+            document.getElementById('listTitle').textContent = '🌿 今日のおすすめコアラ 🌿';
+            showRandomKoalas(3); 
+            return; 
+        }
         let filtered = koalaData.filter(k => k.zoo === zoo);
         let livingCount = filtered.filter(k => !checkIsDead(k)).length;
         document.getElementById('listTitle').style.display = 'block';
@@ -836,8 +854,9 @@
             const isDead = checkIsDead(k);
             const div = document.createElement('div');
             div.className = `birthday-card ${isDead ? 'deceased-style' : ''}`;
-            // ★ここでもジャンプ時のstopPropagationを追加
-            div.innerHTML = `<div style="font-weight:bold; cursor:pointer;" onclick="event.stopPropagation(); jumpToKoala('${k.id}')">${k.name}${isDead ? ' (🌈)' : ''}</div><div style="font-size:0.8em; color:#666;">${k.zoo}</div><div style="color:#e65100; margin-top:5px;">🎂 ${k.birthday}</div><div style="font-size:0.8em; margin-top:3px;">${k.age}</div>`;
+            // ★イベント伝播阻止
+            div.onclick = (e) => { e.stopImmediatePropagation(); jumpToKoala(k.id); };
+            div.innerHTML = `<div style="font-weight:bold;">${k.name}${isDead ? ' (🌈)' : ''}</div><div style="font-size:0.8em; color:#666;">${k.zoo}</div><div style="color:#e65100; margin-top:5px;">🎂 ${k.birthday}</div><div style="font-size:0.8em; margin-top:3px;">${k.age}</div>`;
             list.appendChild(div);
         });
         if (displayList.length === 0 && !showDeceasedBirthday) {
