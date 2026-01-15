@@ -402,7 +402,7 @@
             closeModals();
             // try-catchでレンダリングエラー時の空白化を防ぐ
             try {
-                renderDetailView(state.id);
+                renderDetailView(String(state.id)); // 文字列に統一
             } catch(e) {
                 console.error(e);
                 goHome();
@@ -414,7 +414,7 @@
         if (state.page === 'family' && state.id) {
             closeModals();
             try {
-                renderFamilyView(state.id);
+                renderFamilyView(String(state.id));
             } catch(e) {
                 console.error(e);
                 goHome();
@@ -432,34 +432,38 @@
     
     function jumpToKoala(koalaId) {
         if (!koalaId) return;
+        const idStr = String(koalaId); // IDを文字列化
         closeModals(); 
         
-        const target = koalaData.find(k => k.id === koalaId);
+        const target = koalaData.find(k => String(k.id) === idStr);
         if (!target) {
-            console.warn("Koala not found:", koalaId);
+            console.warn("Koala not found:", idStr);
             return;
         }
 
-        history.pushState({ page: 'detail', id: koalaId }, null, '');
-        renderDetailView(koalaId);
+        history.pushState({ page: 'detail', id: idStr }, null, '');
+        renderDetailView(idStr);
     }
 
     function showFamily(koalaId) {
         if (!koalaId) return;
+        const idStr = String(koalaId);
         closeModals();
 
-        history.pushState({ page: 'family', id: koalaId }, null, '');
-        renderFamilyView(koalaId);
+        history.pushState({ page: 'family', id: idStr }, null, '');
+        renderFamilyView(idStr);
     }
 
     function showPedigree(id) {
-        history.pushState({ page: 'modal', id: id, type: 'pedigree' }, null, '');
-        renderPedigreeModal(id);
+        const idStr = String(id);
+        history.pushState({ page: 'modal', id: idStr, type: 'pedigree' }, null, '');
+        renderPedigreeModal(idStr);
     }
 
     function showSiblings(id) {
-        history.pushState({ page: 'modal', id: id, type: 'sibling' }, null, '');
-        renderSiblingsModal(id);
+        const idStr = String(id);
+        history.pushState({ page: 'modal', id: idStr, type: 'sibling' }, null, '');
+        renderSiblingsModal(idStr);
     }
 
     function goHome() {
@@ -485,7 +489,8 @@
     }
 
     function renderDetailView(id) {
-        const target = koalaData.find(k => k.id === id);
+        const idStr = String(id);
+        const target = koalaData.find(k => String(k.id) === idStr);
         if (!target) { goHome(); return; }
 
         setupDetailPageUI();
@@ -500,7 +505,8 @@
     }
 
     function renderFamilyView(id) {
-        const parent = koalaData.find(k => k.id === id);
+        const idStr = String(id);
+        const parent = koalaData.find(k => String(k.id) === idStr);
         if (!parent) { goHome(); return; }
 
         setupDetailPageUI();
@@ -510,7 +516,7 @@
         list.innerHTML = ''; 
         
         let children = koalaData.filter(k => 
-            (k.mother_id && k.mother_id === id) || (k.father_id && k.father_id === id)
+            (k.mother_id && String(k.mother_id) === idStr) || (k.father_id && String(k.father_id) === idStr)
         );
 
         title.style.display = 'block';
@@ -540,16 +546,19 @@
     // ▼▼▼ モーダル描画処理 ▼▼▼
 
     function renderPedigreeModal(id) {
-        const self = koalaData.find(k => k.id === id);
+        const idStr = String(id);
+        const self = koalaData.find(k => String(k.id) === idStr);
         if (!self) return;
 
-        const father = koalaData.find(k => k.id === self.father_id);
-        const mother = koalaData.find(k => k.id === self.mother_id);
+        // ID一致で検索
+        const father = koalaData.find(k => String(k.id) === String(self.father_id));
+        const mother = koalaData.find(k => String(k.id) === String(self.mother_id));
         
-        const ff = father ? koalaData.find(k => k.id === father.father_id) : null;
-        const fm = father ? koalaData.find(k => k.id === father.mother_id) : null;
-        const mf = mother ? koalaData.find(k => k.id === mother.father_id) : null;
-        const mm = mother ? koalaData.find(k => k.id === mother.mother_id) : null;
+        // 祖父母検索
+        const ff = father ? koalaData.find(k => String(k.id) === String(father.father_id)) : null;
+        const fm = father ? koalaData.find(k => String(k.id) === String(father.mother_id)) : null;
+        const mf = mother ? koalaData.find(k => String(k.id) === String(mother.father_id)) : null;
+        const mm = mother ? koalaData.find(k => String(k.id) === String(mother.mother_id)) : null;
 
         const getName = (k, defaultText) => k ? k.name : (defaultText || "不明");
         const getStyle = (k) => k ? (k.gender === 'オス' ? 'ped-male' : 'ped-female') : '';
@@ -583,7 +592,8 @@
     }
 
     function renderSiblingsModal(id) {
-        const self = koalaData.find(k => k.id === id);
+        const idStr = String(id);
+        const self = koalaData.find(k => String(k.id) === idStr);
         if (!self) return;
 
         document.getElementById('siblingModalTitle').textContent = `🍒 ${self.name} のきょうだい`;
@@ -600,13 +610,13 @@
         let fullSiblings = [], maternalSiblings = [], paternalSiblings = [];
 
         if (hasValidFather && hasValidMother) {
-            fullSiblings = koalaData.filter(k => k.id !== self.id && k.father_id === self.father_id && k.mother_id === self.mother_id);
+            fullSiblings = koalaData.filter(k => String(k.id) !== idStr && String(k.father_id) === String(self.father_id) && String(k.mother_id) === String(self.mother_id));
         }
         if (hasValidMother) {
-            maternalSiblings = koalaData.filter(k => k.id !== self.id && k.mother_id === self.mother_id && k.father_id !== self.father_id);
+            maternalSiblings = koalaData.filter(k => String(k.id) !== idStr && String(k.mother_id) === String(self.mother_id) && String(k.father_id) !== String(self.father_id));
         }
         if (hasValidFather) {
-            paternalSiblings = koalaData.filter(k => k.id !== self.id && k.father_id === self.father_id && k.mother_id !== self.mother_id);
+            paternalSiblings = koalaData.filter(k => String(k.id) !== idStr && String(k.father_id) === String(self.father_id) && String(k.mother_id) !== String(self.mother_id));
         }
 
         const content = document.getElementById('siblingListContent');
@@ -642,8 +652,7 @@
                 const genderColor = k.gender?.includes('オス') ? '#4A90E2' : (k.gender?.includes('メス') ? '#E24A8D' : '#999');
                 const row = document.createElement('div');
                 row.className = 'sibling-item';
-                // ★修正点：イベントバブリング防止をonclick属性で制御するため、ここはシンプルに
-                // 念のためJS側でもstopPropagationを入れるが、HTML側のdiv onclick="event.stopPropagation()" が最強の防壁になる
+                // ★イベントバブリング防止 (履歴2重戻りを防ぐ)
                 row.onclick = (e) => {
                     e.stopPropagation(); 
                     jumpToKoala(k.id);
@@ -665,8 +674,10 @@
     function closeModalsFromUI(e, isButton = false) {
         if (!e) return;
         
-        // ボタンまたはオーバーレイ（背景）クリックのみ反応する
-        // ※ コンテンツ部分のクリックはHTML側の onclick="event.stopPropagation()" でここに来ない
+        if (isButton) {
+            e.stopPropagation();
+        }
+
         if (e.target.className === 'modal-overlay' || e.target.className === 'close-btn' || isButton) {
             history.back();
         }
@@ -694,21 +705,23 @@
         const url = zooUrls[koala.zoo];
         if (url) zooDisplay = `<a href="${url}" target="_blank" class="zoo-link">📍 ${koala.zoo} 🔗</a>`;
 
+        // ★親リンクにも event.stopPropagation() を追加してバグを完全に防止
         const fatherDisplay = koala.father_id 
-            ? `<span class="parent-link" onclick="jumpToKoala('${koala.father_id}')">${koala.father}</span>` 
+            ? `<span class="parent-link" onclick="event.stopPropagation(); jumpToKoala('${koala.father_id}')">${koala.father}</span>` 
             : (koala.father || "-");
         const motherDisplay = koala.mother_id 
-            ? `<span class="parent-link" onclick="jumpToKoala('${koala.mother_id}')">${koala.mother}</span>` 
+            ? `<span class="parent-link" onclick="event.stopPropagation(); jumpToKoala('${koala.mother_id}')">${koala.mother}</span>` 
             : (koala.mother || "-");
 
         const div = document.createElement('div');
         div.className = `koala-card ${deadClass} ${isHero ? 'parent-hero' : ''}`;
         
+        // ★ボタンクリックも event.stopPropagation() を念のため追加
         const buttons = koala.id ? `
             <div style="display:flex; gap:8px; margin-top:15px;">
-                <button class="family-btn" onclick="showPedigree('${koala.id}')">🧬 家族さん</button>
-                <button class="family-btn" onclick="showSiblings('${koala.id}')">🍒 きょうだい</button>
-                <button class="family-btn" onclick="showFamily('${koala.id}')">🥰 こども</button>
+                <button class="family-btn" onclick="event.stopPropagation(); showPedigree('${koala.id}')">🧬 家族さん</button>
+                <button class="family-btn" onclick="event.stopPropagation(); showSiblings('${koala.id}')">🍒 きょうだい</button>
+                <button class="family-btn" onclick="event.stopPropagation(); showFamily('${koala.id}')">🥰 こども</button>
             </div>
         ` : '';
 
@@ -823,7 +836,8 @@
             const isDead = checkIsDead(k);
             const div = document.createElement('div');
             div.className = `birthday-card ${isDead ? 'deceased-style' : ''}`;
-            div.innerHTML = `<div style="font-weight:bold; cursor:pointer;" onclick="jumpToKoala('${k.id}')">${k.name}${isDead ? ' (🌈)' : ''}</div><div style="font-size:0.8em; color:#666;">${k.zoo}</div><div style="color:#e65100; margin-top:5px;">🎂 ${k.birthday}</div><div style="font-size:0.8em; margin-top:3px;">${k.age}</div>`;
+            // ★ここでもジャンプ時のstopPropagationを追加
+            div.innerHTML = `<div style="font-weight:bold; cursor:pointer;" onclick="event.stopPropagation(); jumpToKoala('${k.id}')">${k.name}${isDead ? ' (🌈)' : ''}</div><div style="font-size:0.8em; color:#666;">${k.zoo}</div><div style="color:#e65100; margin-top:5px;">🎂 ${k.birthday}</div><div style="font-size:0.8em; margin-top:3px;">${k.age}</div>`;
             list.appendChild(div);
         });
         if (displayList.length === 0 && !showDeceasedBirthday) {
