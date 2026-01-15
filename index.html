@@ -649,7 +649,11 @@
                 const genderColor = k.gender?.includes('オス') ? '#4A90E2' : (k.gender?.includes('メス') ? '#E24A8D' : '#999');
                 const row = document.createElement('div');
                 row.className = 'sibling-item';
-                row.onclick = () => jumpToKoala(k.id); 
+                // ★イベントバブリング防止 (履歴2重戻りを防ぐ)
+                row.onclick = (e) => {
+                    e.stopPropagation();
+                    jumpToKoala(k.id);
+                }; 
                 row.innerHTML = `
                     <div>
                         <div class="sibling-name"><span style="color:${genderColor};">●</span> ${k.name} ${isDead ? '<span style="font-size:0.8em">🌈</span>' : ''}</div>
