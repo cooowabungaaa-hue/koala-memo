@@ -329,7 +329,7 @@
 
 <div id="pedigreeModal" class="modal-overlay" onclick="closeModalsFromUI(event)">
     <div class="modal-content">
-        <span class="close-btn" onclick="closeModalsFromUI(event)">×</span>
+        <span class="close-btn" onclick="closeModalsFromUI(event, true)">×</span>
         <h2 style="text-align:center; color:#2e7d32; margin:0;">🧬 家族さん</h2>
         <div id="pedigreeChart" class="pedigree-table"></div>
     </div>
@@ -337,7 +337,7 @@
 
 <div id="siblingModal" class="modal-overlay" onclick="closeModalsFromUI(event)">
     <div class="modal-content">
-        <span class="close-btn" onclick="closeModalsFromUI(event)">×</span>
+        <span class="close-btn" onclick="closeModalsFromUI(event, true)">×</span>
         <h2 style="text-align:center; color:#2e7d32; margin:0;">🍒 きょうだい</h2>
         <div id="siblingListContent"></div>
     </div>
@@ -387,9 +387,16 @@
     window.addEventListener('popstate', function(e) {
         const state = e.state;
 
+        // データ読み込み前ならホームに戻す安全策
+        if (koalaData.length === 0) {
+             closeModals();
+             resetAppUI();
+             return;
+        }
+
         // 状態がない、またはlistの場合は一覧に戻す
         if (!state || state.page === 'list') {
-            closeModals(); // モーダルがあれば閉じる
+            closeModals();
             renderListView();
             return;
         }
@@ -408,10 +415,11 @@
             return;
         }
         
-        // モーダル履歴への戻り（基本は閉じる）
+        // モーダル履歴への戻り
+        // 基本的には「閉じる」動作になるので、画面更新は不要
         if (state.page === 'modal') {
-             // モーダルを開いている状態に戻る必要があればここに記述するが
-             // 通常は閉じてその下の画面を見せるだけで十分
+             // 必要であればここでモーダル再表示ロジックを書くが
+             // 戻るボタンで「閉じる」のが自然なため特になにもしない
         }
     });
 
@@ -419,14 +427,11 @@
     
     // 詳細へジャンプ
     function jumpToKoala(koalaId) {
-        if (!koalaId) return; // IDがない場合は何もしない
+        if (!koalaId) return;
         closeModals(); 
         
         const target = koalaData.find(k => k.id === koalaId);
-        if (!target) {
-            console.log("Data not found for ID:", koalaId);
-            return; 
-        }
+        if (!target) return;
 
         history.pushState({ page: 'detail', id: koalaId }, null, '');
         renderDetailView(koalaId);
@@ -472,14 +477,22 @@
         showBirthdayKoalas();
         showRandomKoalas(3);
         window.scrollTo(0, 0);
+        
+        document.getElementById('listTitle').style.display = 'block';
+        document.getElementById('listTitle').textContent = '🌿 今日のおすすめコアラ 🌿';
+        const list = document.getElementById('koalaList');
     }
 
     // 詳細画面の描画
     function renderDetailView(id) {
         const target = koalaData.find(k => k.id === id);
-        if (!target) return; // エラー回避
+        if (!target) {
+            // データが見つからない場合（空白回避）はホームに戻す
+            goHome(); 
+            return;
+        }
 
-        setupDetailPageUI(); // UIを詳細モードに切り替え
+        setupDetailPageUI();
         
         const list = document.getElementById('koalaList');
         const title = document.getElementById('listTitle');
@@ -493,15 +506,17 @@
     // 家族（こども）一覧画面の描画
     function renderFamilyView(id) {
         const parent = koalaData.find(k => k.id === id);
-        if (!parent) return;
+        if (!parent) {
+            goHome();
+            return;
+        }
 
         setupDetailPageUI();
 
         const list = document.getElementById('koalaList');
         const title = document.getElementById('listTitle');
-        list.innerHTML = ''; // リセット
+        list.innerHTML = ''; 
         
-        // こどもを探す
         let children = koalaData.filter(k => 
             (k.mother_id && k.mother_id === id) || (k.father_id && k.father_id === id)
         );
@@ -510,9 +525,8 @@
         title.innerHTML = `🥰 ${parent.name} の家系 (こども ${children.length}頭)`;
         list.appendChild(title);
 
-        renderCard(parent, list, true); // 親を表示
+        renderCard(parent, list, true);
 
-        // こどもたちを表示
         if (children.length > 0) {
             children.sort((a, b) => new Date(a.birthday) - new Date(b.birthday));
             children.forEach(child => renderCard(child, list));
@@ -525,7 +539,7 @@
         window.scrollTo(0, 0);
     }
 
-    // 詳細ページ用のUIセットアップ（共通）
+    // 詳細ページ用のUIセットアップ
     function setupDetailPageUI() {
         document.getElementById('birthdaySection').style.display = 'none';
         document.getElementById('searchContainer').style.display = 'none';
@@ -615,7 +629,6 @@
         document.getElementById('siblingModal').style.display = 'flex';
     }
 
-    // きょうだいセクション描画ヘルパー
     function renderSiblingSection(container, title, list, emptyMsg = "記録なし") {
         const section = document.createElement('div');
         section.className = 'sibling-section';
@@ -650,12 +663,23 @@
         container.appendChild(section);
     }
 
+    // ▼▼▼ クリックイベントの修正（ここが重要！） ▼▼▼
+    
     // UIからのモーダル閉じる処理（履歴を戻す）
-    function closeModalsFromUI(e) {
-        if (!e || e.target.className === 'modal-overlay' || e.target.className === 'close-btn') {
+    function closeModalsFromUI(e, isButton = false) {
+        if (!e) return;
+        
+        // ボタンが押された場合、イベントが背景（オーバーレイ）へ伝わるのを防ぐ
+        if (isButton) {
+            e.stopPropagation();
+        }
+
+        // オーバーレイクリック、または×ボタンクリックの場合のみ閉じる
+        if (e.target.className === 'modal-overlay' || e.target.className === 'close-btn' || isButton) {
             history.back();
         }
     }
+
     // 内部的なモーダル閉じる処理
     function closeModals() {
         document.getElementById('pedigreeModal').style.display = 'none';
