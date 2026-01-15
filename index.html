@@ -232,13 +232,13 @@
             font-weight: bold;
             display: flex; align-items: center; justify-content: center; gap: 5px;
             font-size: 0.9em;
-            text-decoration: none; /* リンクの下線を消す */
+            text-decoration: none;
             box-sizing: border-box;
             min-width: 80px;
         }
         .family-btn:hover { background-color: #ffe0b2; }
 
-        /* Instagramボタン用の特別スタイル */
+        /* Instagramボタン */
         .insta-btn {
             background: linear-gradient(45deg, #833ab4, #fd1d1d, #fcb045);
             color: white !important;
@@ -589,10 +589,8 @@
             ? `<span class="parent-link" onclick="event.stopPropagation(); jumpToKoala('${koala.mother_id}')">${koala.mother}</span>` 
             : (koala.mother || "-");
 
-        // ★Instagramボタン生成（URLスキーム）
-        // 検索クエリ: #コアラ #{名前}
-        const instaQuery = encodeURIComponent(`#コアラ #${koala.name}`);
-        const instaUrl = `https://www.instagram.com/explore/search/keyword/?q=${instaQuery}`;
+        // ★Instagramボタン生成（アプリで開くにはタグページが確実）
+        const instaUrl = `https://www.instagram.com/explore/tags/${encodeURIComponent(koala.name)}/`;
 
         const buttons = koala.id ? `
             <div class="card-buttons">
@@ -651,8 +649,7 @@
     }
 
     function renderSiblingsModal(id) {
-        const idStr = String(id);
-        const self = koalaData.find(k => k.id === idStr);
+        const self = koalaData.find(k => k.id === id);
         if (!self) return;
 
         document.getElementById('siblingModalTitle').textContent = `🍒 ${self.name} のきょうだい`;
@@ -662,7 +659,7 @@
         const hasF = (self.father_id && isValid(self.father));
         const hasM = (self.mother_id && isValid(self.mother));
 
-        const siblings = koalaData.filter(k => k.id !== idStr);
+        const siblings = koalaData.filter(k => k.id !== id);
         const full = siblings.filter(k => k.father_id === self.father_id && k.mother_id === self.mother_id && hasF && hasM);
         const maternal = siblings.filter(k => k.mother_id === self.mother_id && k.father_id !== self.father_id && hasM);
         const paternal = siblings.filter(k => k.father_id === self.father_id && k.mother_id !== self.mother_id && hasF);
@@ -742,6 +739,7 @@
         const text = document.getElementById('searchInput').value.toLowerCase();
         document.getElementById('zooFilter').value = "";
         
+        // 検索時はリストビューを強制表示
         document.getElementById('homeView').style.display = 'block';
         document.getElementById('listView').style.display = 'block';
         document.getElementById('backButton').style.display = 'none';
