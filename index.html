@@ -244,7 +244,7 @@
         /* 家族さん（旧：血統表）のスタイル */
         .pedigree-table {
             display: grid;
-            grid-template-columns: 1fr 1fr 1fr; /* 左:自分、中:親、右:祖父母 */
+            grid-template-columns: 1fr 1fr 1fr; /* 左:祖父母、中:親、右:自分 */
             grid-template-rows: repeat(4, 1fr); /* 4行固定 */
             gap: 4px; margin-top: 15px; border: 2px solid #2e7d32; background-color: #2e7d32;
         }
@@ -254,16 +254,19 @@
             text-align: center; font-size: 0.8em;
         }
 
-        /* ▼ 配置の座席指定 */
-        .ped-pos-ff { grid-column: 3; grid-row: 1; }      /* 父父 (右・1行目) */
-        .ped-pos-fm { grid-column: 3; grid-row: 2; }      /* 父母 (右・2行目) */
-        .ped-pos-father { grid-column: 2; grid-row: 1 / 3; } /* 父 (中・上半分) */
+        /* ▼ 配置の座席指定 (Left=Grandparents, Mid=Parents, Right=Self) */
+        /* カラム1（左）は祖父母 */
+        .ped-pos-ff { grid-column: 1; grid-row: 1; }      /* 父父 */
+        .ped-pos-fm { grid-column: 1; grid-row: 2; }      /* 父母 */
+        .ped-pos-mf { grid-column: 1; grid-row: 3; }      /* 母父 */
+        .ped-pos-mm { grid-column: 1; grid-row: 4; }      /* 母母 */
+
+        /* カラム2（中央）は両親 */
+        .ped-pos-father { grid-column: 2; grid-row: 1 / 3; } /* 父 */
+        .ped-pos-mother { grid-column: 2; grid-row: 3 / 5; } /* 母 */
         
-        .ped-pos-mf { grid-column: 3; grid-row: 3; }      /* 母父 (右・3行目) */
-        .ped-pos-mm { grid-column: 3; grid-row: 4; }      /* 母母 (右・4行目) */
-        .ped-pos-mother { grid-column: 2; grid-row: 3 / 5; } /* 母 (中・下半分) */
-        
-        .ped-pos-self { grid-column: 1; grid-row: 1 / 5; font-size: 1.1em; background-color: #e8f5e9; font-weight: bold; } /* 自分 (左・全行) */
+        /* カラム3（右）は自分 */
+        .ped-pos-self { grid-column: 3; grid-row: 1 / 5; font-size: 1.1em; background-color: #e8f5e9; font-weight: bold; }
 
         .ped-male { border-left: 3px solid #4A90E2; }
         .ped-female { border-left: 3px solid #E24A8D; }
@@ -384,13 +387,13 @@
         // モーダルが開いていたら閉じる
         if (document.getElementById('pedigreeModal').style.display === 'flex' || 
             document.getElementById('siblingModal').style.display === 'flex') {
-            closeModals(null, true); // true = 履歴操作なしで閉じる
+            closeModals(null, true); 
             return;
         }
 
         // 詳細画面から一覧に戻る
         if (appState === 'detail') {
-            resetApp(true); // true = 履歴操作なしで戻る
+            resetApp(true);
         }
     });
 
@@ -416,15 +419,11 @@
         window.scrollTo(0, 0);
 
         appState = 'list';
-        // 戻るボタン以外から呼ばれた場合のみ、履歴操作（本当はreplaceStateなどが良いが簡易的に）
-        if (!fromBackKey) {
-            // 一覧に戻ったときは履歴を汚さないように何もしない、またはreplaceState
-        }
     }
 
     // 単一のコアラを表示する機能
     function jumpToKoala(koalaId) {
-        // モーダルを閉じる（詳細へ飛ぶため）
+        // モーダルを閉じる
         document.getElementById('pedigreeModal').style.display = 'none';
         document.getElementById('siblingModal').style.display = 'none';
         
@@ -631,7 +630,7 @@
         document.getElementById('pedigreeModal').style.display = 'flex';
     }
 
-    // モーダルを閉じる (履歴操作フラグを追加)
+    // モーダルを閉じる
     function closeModals(e, fromBackKey = false) {
         if (!e || e.target.className === 'modal-overlay' || e.target.className === 'close-btn') {
             document.getElementById('pedigreeModal').style.display = 'none';
@@ -641,8 +640,6 @@
             if (!fromBackKey && appState === 'modal') {
                 history.back();
             }
-            // 状態を戻す（モーダルの下にあるのは detail か list だが、簡易的に戻ったことにする）
-            // appState = 'detail'; // 厳密な管理は難しいのでここでは省略
         }
     }
 
