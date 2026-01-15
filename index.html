@@ -327,17 +327,17 @@
     <div id="loadingMsg" style="text-align:center; color:#999; grid-column:1/-1;">データを読み込んでいます...</div>
 </div>
 
-<div id="pedigreeModal" class="modal-overlay" onclick="closeModals(event)">
+<div id="pedigreeModal" class="modal-overlay" onclick="closeModalsFromUI(event)">
     <div class="modal-content">
-        <span class="close-btn" onclick="closeModals(event)">×</span>
+        <span class="close-btn" onclick="closeModalsFromUI(event)">×</span>
         <h2 style="text-align:center; color:#2e7d32; margin:0;">🧬 家族さん</h2>
         <div id="pedigreeChart" class="pedigree-table"></div>
     </div>
 </div>
 
-<div id="siblingModal" class="modal-overlay" onclick="closeModals(event)">
+<div id="siblingModal" class="modal-overlay" onclick="closeModalsFromUI(event)">
     <div class="modal-content">
-        <span class="close-btn" onclick="closeModals(event)">×</span>
+        <span class="close-btn" onclick="closeModalsFromUI(event)">×</span>
         <h2 style="text-align:center; color:#2e7d32; margin:0;">🍒 きょうだい</h2>
         <div id="siblingListContent"></div>
     </div>
@@ -373,7 +373,7 @@
                 showBirthdayKoalas();
                 showRandomKoalas(3);
                 
-                // 初回ロード時に履歴をセット
+                // 初回ロード時に履歴の初期状態をセット
                 history.replaceState({ page: 'list' }, null, '');
             },
             error: function(err) {
@@ -384,30 +384,32 @@
 
     // ▼ ブラウザの「戻る」ボタンが押されたときの処理
     window.addEventListener('popstate', function(e) {
-        // モーダルが開いていたら閉じる
-        if (document.getElementById('pedigreeModal').style.display === 'flex' || 
-            document.getElementById('siblingModal').style.display === 'flex') {
-            closeModals(null, true); 
+        const state = e.state;
+
+        if (!state || state.page === 'list') {
+            closeModals();
+            resetAppUI();
             return;
         }
 
-        // 詳細画面から一覧に戻る
-        if (appState === 'detail') {
-            resetApp(true);
+        if (state.page === 'detail' && state.id) {
+            closeModals();
+            const target = koalaData.find(k => k.id === state.id);
+            if (target) {
+                renderDetail(target);
+            } else {
+                resetAppUI();
+            }
+            return;
         }
     });
-
-    // 履歴を追加する便利関数
-    function pushHistory(newState) {
-        history.pushState({ page: newState }, null, '');
-        appState = newState;
-    }
 
     function checkIsDead(koala) {
         return (koala.death && koala.death !== "") || (koala.age === "没年齢不明");
     }
 
-    function resetApp(fromBackKey = false) {
+    // TOPに戻るUI処理（履歴操作なし）
+    function resetAppUI() {
         document.getElementById('backButton').style.display = 'none';
         document.getElementById('birthdaySection').style.display = 'block';
         document.getElementById('searchContainer').style.display = 'block';
@@ -417,22 +419,20 @@
         showBirthdayKoalas();
         showRandomKoalas(3);
         window.scrollTo(0, 0);
-
-        appState = 'list';
+        
+        document.getElementById('listTitle').style.display = 'block';
+        document.getElementById('listTitle').textContent = '🌿 今日のおすすめコアラ 🌿';
+        const list = document.getElementById('koalaList');
     }
 
-    // 単一のコアラを表示する機能
-    function jumpToKoala(koalaId) {
-        // モーダルを閉じる
-        document.getElementById('pedigreeModal').style.display = 'none';
-        document.getElementById('siblingModal').style.display = 'none';
-        
-        const target = koalaData.find(k => k.id === koalaId);
-        if (!target) return;
+    // ユーザーが「TOPへ戻る」ボタンを押した時
+    function resetApp() {
+        history.pushState({ page: 'list' }, null, '');
+        resetAppUI();
+    }
 
-        // ★履歴に追加
-        pushHistory('detail');
-
+    // コアラ詳細を描画する関数（履歴操作なし）
+    function renderDetail(koala) {
         document.getElementById('birthdaySection').style.display = 'none';
         document.getElementById('searchContainer').style.display = 'none';
         document.getElementById('backButton').style.display = 'block';
@@ -442,20 +442,25 @@
         list.innerHTML = '';
         title.style.display = 'none';
 
-        renderCard(target, list, true);
+        renderCard(koala, list, true);
         window.scrollTo(0, 0);
+    }
+
+    // 単一のコアラへジャンプ（クリック時）
+    function jumpToKoala(koalaId) {
+        closeModals(); // モーダルは閉じる
+        const target = koalaData.find(k => k.id === koalaId);
+        if (!target) return;
+
+        history.pushState({ page: 'detail', id: koalaId }, null, '');
+        renderDetail(target);
     }
 
     function showFamily(koalaId) {
         const parent = koalaData.find(k => k.id === koalaId);
         if (!parent) return;
 
-        // ★履歴に追加
-        pushHistory('detail');
-
-        let children = koalaData.filter(k => 
-            (k.mother_id && k.mother_id === koalaId) || (k.father_id && k.father_id === koalaId)
-        );
+        history.pushState({ page: 'detail', id: koalaId, type: 'family' }, null, '');
 
         document.getElementById('birthdaySection').style.display = 'none';
         document.getElementById('searchContainer').style.display = 'none';
@@ -466,11 +471,15 @@
         list.innerHTML = '';
         
         title.style.display = 'block';
-        title.innerHTML = `🥰 ${parent.name} の家系 (こども ${children.length}頭)`;
+        title.innerHTML = `🥰 ${parent.name} の家系 (こども ${childrenCount(koalaId)}頭)`;
         list.appendChild(title);
 
         renderCard(parent, list, true);
 
+        // 子供たちを表示
+        let children = koalaData.filter(k => 
+            (k.mother_id && k.mother_id === koalaId) || (k.father_id && k.father_id === koalaId)
+        );
         if (children.length > 0) {
             children.sort((a, b) => new Date(a.birthday) - new Date(b.birthday));
             children.forEach(child => renderCard(child, list));
@@ -482,14 +491,17 @@
         }
         window.scrollTo(0, 0);
     }
+    
+    function childrenCount(koalaId) {
+         return koalaData.filter(k => (k.mother_id === koalaId) || (k.father_id === koalaId)).length;
+    }
 
     // ▼ きょうだい表示機能
     function showSiblings(id) {
         const self = koalaData.find(k => k.id === id);
         if (!self) return;
 
-        // ★履歴に追加
-        pushHistory('modal');
+        history.pushState({ page: 'modal', id: id, type: 'sibling' }, null, '');
 
         const isValidParent = (parentId, parentName) => {
             if (!parentId || !parentName) return false;
@@ -530,26 +542,34 @@
         const content = document.getElementById('siblingListContent');
         content.innerHTML = ''; 
 
+        // 親が二人とも不明な場合
         if (!hasValidFather && !hasValidMother) {
             content.innerHTML = '<p style="text-align:center; color:#999; margin-top:30px;">両親の情報が記録されていない、または不明なため、きょうだいを表示できません</p>';
             document.getElementById('siblingModal').style.display = 'flex';
             return;
         }
 
-        if (fullSiblings.length === 0 && maternalSiblings.length === 0 && paternalSiblings.length === 0) {
-            content.innerHTML = '<p style="text-align:center; color:#999; margin-top:30px;">記録されている兄弟姉妹はいません</p>';
-        } else {
-            if (fullSiblings.length > 0) renderSiblingSection(content, `💖 全きょうだい（${self.father} & ${self.mother}）`, fullSiblings);
-            if (maternalSiblings.length > 0) renderSiblingSection(content, `🧡 お母さん（${self.mother}）`, maternalSiblings);
-            if (paternalSiblings.length > 0) renderSiblingSection(content, `💙 お父さん（${self.father}）`, paternalSiblings);
+        // 表示処理
+        // 1. 全きょうだい（いる場合のみ表示）
+        if (fullSiblings.length > 0) {
+            renderSiblingSection(content, `💖 全きょうだい（${self.father} & ${self.mother}）`, fullSiblings);
+        }
+
+        // 2. お母さん（有効なら必ず表示、いなければメッセージ）
+        if (hasValidMother) {
+            renderSiblingSection(content, `🧡 お母さん（${self.mother}）`, maternalSiblings, "このお母さんとのきょうだいは記録されていません");
+        }
+
+        // 3. お父さん（有効なら必ず表示、いなければメッセージ）
+        if (hasValidFather) {
+            renderSiblingSection(content, `💙 お父さん（${self.father}）`, paternalSiblings, "このお父さんとのきょうだいは記録されていません");
         }
 
         document.getElementById('siblingModal').style.display = 'flex';
     }
 
-    function renderSiblingSection(container, title, list) {
-        list.sort((a, b) => new Date(a.birthday) - new Date(b.birthday));
-
+    // リスト描画関数（空の場合はメッセージを表示）
+    function renderSiblingSection(container, title, list, emptyMsg = "記録なし") {
         const section = document.createElement('div');
         section.className = 'sibling-section';
         
@@ -558,25 +578,35 @@
         h3.textContent = title;
         section.appendChild(h3);
 
-        list.forEach(k => {
-            const isDead = checkIsDead(k);
-            const genderColor = k.gender?.includes('オス') ? '#4A90E2' : (k.gender?.includes('メス') ? '#E24A8D' : '#999');
-            const row = document.createElement('div');
-            row.className = 'sibling-item';
-            row.onclick = () => jumpToKoala(k.id); 
-            row.innerHTML = `
-                <div>
-                    <div class="sibling-name">
-                        <span style="color:${genderColor};">●</span>
-                        ${k.name} ${isDead ? '<span style="font-size:0.8em">🌈</span>' : ''}
+        if (list.length === 0) {
+            const p = document.createElement('p');
+            p.style.color = '#999';
+            p.style.fontSize = '0.85em';
+            p.style.padding = '8px';
+            p.style.margin = '0';
+            p.textContent = emptyMsg;
+            section.appendChild(p);
+        } else {
+            list.sort((a, b) => new Date(a.birthday) - new Date(b.birthday));
+            list.forEach(k => {
+                const isDead = checkIsDead(k);
+                const genderColor = k.gender?.includes('オス') ? '#4A90E2' : (k.gender?.includes('メス') ? '#E24A8D' : '#999');
+                const row = document.createElement('div');
+                row.className = 'sibling-item';
+                row.onclick = () => jumpToKoala(k.id); 
+                row.innerHTML = `
+                    <div>
+                        <div class="sibling-name">
+                            <span style="color:${genderColor};">●</span>
+                            ${k.name} ${isDead ? '<span style="font-size:0.8em">🌈</span>' : ''}
+                        </div>
+                        <div style="font-size:0.8em; color:#666;">${k.zoo}</div>
                     </div>
-                    <div style="font-size:0.8em; color:#666;">${k.zoo}</div>
-                </div>
-                <div style="font-size:0.85em; color:#e65100;">${k.birthday || '-'}</div>
-            `;
-            section.appendChild(row);
-        });
-
+                    <div style="font-size:0.85em; color:#e65100;">${k.birthday || '-'}</div>
+                `;
+                section.appendChild(row);
+            });
+        }
         container.appendChild(section);
     }
 
@@ -586,7 +616,7 @@
         if (!self) return;
 
         // ★履歴に追加
-        pushHistory('modal');
+        history.pushState({ page: 'modal', id: id, type: 'pedigree' }, null, '');
 
         const father = koalaData.find(k => k.id === self.father_id);
         const mother = koalaData.find(k => k.id === self.mother_id);
@@ -630,17 +660,17 @@
         document.getElementById('pedigreeModal').style.display = 'flex';
     }
 
-    // モーダルを閉じる
-    function closeModals(e, fromBackKey = false) {
+    // 画面上の×ボタンなどを押したときの閉じる処理
+    function closeModalsFromUI(e) {
         if (!e || e.target.className === 'modal-overlay' || e.target.className === 'close-btn') {
-            document.getElementById('pedigreeModal').style.display = 'none';
-            document.getElementById('siblingModal').style.display = 'none';
-            
-            // 戻るボタン以外（×ボタンなど）で閉じた場合は、履歴を1つ戻しておく
-            if (!fromBackKey && appState === 'modal') {
-                history.back();
-            }
+            history.back();
         }
+    }
+
+    // 内部的なモーダル非表示処理（履歴操作なし）
+    function closeModals() {
+        document.getElementById('pedigreeModal').style.display = 'none';
+        document.getElementById('siblingModal').style.display = 'none';
     }
 
     function renderCard(koala, container, isHero = false) {
