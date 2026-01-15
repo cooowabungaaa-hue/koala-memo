@@ -196,9 +196,6 @@
             display: inline-block; background-color: #e8f5e9; color: #2e7d32;
             padding: 4px 10px; border-radius: 4px; font-size: 0.9em; font-weight: bold; margin-bottom: 12px;
         }
-        /* 動物園リンクのスタイル */
-        a.zoo-link { text-decoration: none; color: inherit; display: inline-flex; align-items: center; gap: 5px; }
-        a.zoo-link:hover { opacity: 0.7; text-decoration: underline; }
 
         .detail-grid {
             display: grid; grid-template-columns: auto 1fr; gap: 5px 10px; font-size: 0.95em; color: #444;
@@ -209,11 +206,19 @@
             font-size: 0.9em; color: #555; line-height: 1.5;
         }
 
+        a.zoo-link { text-decoration: none; color: inherit; display: inline-flex; align-items: center; gap: 5px; }
+        a.zoo-link:hover { opacity: 0.7; text-decoration: underline; }
+
         .parent-link {
             color: #2e7d32;
             text-decoration: underline;
             cursor: pointer;
             font-weight: bold;
+        }
+
+        /* ▼ ボタンエリア */
+        .card-buttons {
+            display: flex; gap: 8px; margin-top: 15px; flex-wrap: wrap;
         }
 
         .family-btn {
@@ -227,8 +232,19 @@
             font-weight: bold;
             display: flex; align-items: center; justify-content: center; gap: 5px;
             font-size: 0.9em;
+            text-decoration: none; /* リンクの下線を消す */
+            box-sizing: border-box;
+            min-width: 80px;
         }
         .family-btn:hover { background-color: #ffe0b2; }
+
+        /* Instagramボタン用の特別スタイル */
+        .insta-btn {
+            background: linear-gradient(45deg, #833ab4, #fd1d1d, #fcb045);
+            color: white !important;
+            border: none;
+        }
+        .insta-btn:hover { opacity: 0.9; }
 
         /* ▼ モーダル共通設定 */
         .modal-overlay {
@@ -480,7 +496,7 @@
         
         const list = document.getElementById('koalaList');
         const title = document.getElementById('listTitle');
-        list.innerHTML = ''; // クリア
+        list.innerHTML = '';
 
         // 検索状態の復元チェック
         const searchText = document.getElementById('searchInput').value;
@@ -559,25 +575,31 @@
         if (koala.gender?.includes('オス')) genderClass = 'male';
         if (koala.gender?.includes('メス')) genderClass = 'female';
 
-        // ★動物園リンク復活
+        // ★動物園リンク
         let zooDisplay = `📍 ${koala.zoo}`;
         const url = zooUrls[koala.zoo];
         if (url) zooDisplay = `<a href="${url}" target="_blank" class="zoo-link" onclick="event.stopPropagation()">📍 ${koala.zoo} 🔗</a>`;
 
         // リンク生成（イベントバブリング防止）
         const fatherLink = koala.father_id 
-            ? `<span class="parent-link" onclick="event.stopImmediatePropagation(); jumpToKoala('${koala.father_id}')">${koala.father}</span>` 
+            ? `<span class="parent-link" onclick="event.stopPropagation(); jumpToKoala('${koala.father_id}')">${koala.father}</span>` 
             : (koala.father || "-");
         
         const motherLink = koala.mother_id 
-            ? `<span class="parent-link" onclick="event.stopImmediatePropagation(); jumpToKoala('${koala.mother_id}')">${koala.mother}</span>` 
+            ? `<span class="parent-link" onclick="event.stopPropagation(); jumpToKoala('${koala.mother_id}')">${koala.mother}</span>` 
             : (koala.mother || "-");
 
+        // ★Instagramボタン生成（URLスキーム）
+        // 検索クエリ: #コアラ #{名前}
+        const instaQuery = encodeURIComponent(`#コアラ #${koala.name}`);
+        const instaUrl = `https://www.instagram.com/explore/search/keyword/?q=${instaQuery}`;
+
         const buttons = koala.id ? `
-            <div style="display:flex; gap:8px; margin-top:15px;">
-                <button class="family-btn" onclick="event.stopImmediatePropagation(); showPedigree('${koala.id}')">🧬 家族さん</button>
-                <button class="family-btn" onclick="event.stopImmediatePropagation(); showSiblings('${koala.id}')">🍒 きょうだい</button>
-                <button class="family-btn" onclick="event.stopImmediatePropagation(); showFamily('${koala.id}')">🥰 こども</button>
+            <div class="card-buttons">
+                <button class="family-btn" onclick="event.stopPropagation(); showPedigree('${koala.id}')">🧬 家族さん</button>
+                <button class="family-btn" onclick="event.stopPropagation(); showSiblings('${koala.id}')">🍒 きょうだい</button>
+                <button class="family-btn" onclick="event.stopPropagation(); showFamily('${koala.id}')">🥰 こども</button>
+                <a href="${instaUrl}" target="_blank" class="family-btn insta-btn" onclick="event.stopPropagation()">📷 Insta</a>
             </div>
         ` : '';
 
@@ -685,8 +707,7 @@
                 const row = document.createElement('div');
                 row.className = 'sibling-item';
                 row.onclick = (e) => { 
-                    e.stopImmediatePropagation();
-                    e.preventDefault(); 
+                    e.stopPropagation();
                     jumpToKoala(k.id); 
                 };
                 row.innerHTML = `
@@ -721,7 +742,6 @@
         const text = document.getElementById('searchInput').value.toLowerCase();
         document.getElementById('zooFilter').value = "";
         
-        // 検索時はリストビューを強制表示
         document.getElementById('homeView').style.display = 'block';
         document.getElementById('listView').style.display = 'block';
         document.getElementById('backButton').style.display = 'none';
@@ -804,7 +824,7 @@
             display.forEach(k => {
                 const div = document.createElement('div');
                 div.className = `birthday-card ${checkIsDead(k) ? 'deceased-style' : ''}`;
-                div.onclick = (e) => { e.stopImmediatePropagation(); jumpToKoala(k.id); };
+                div.onclick = (e) => { e.stopPropagation(); jumpToKoala(k.id); };
                 div.innerHTML = `<div style="font-weight:bold;">${k.name}${checkIsDead(k) ? ' (🌈)' : ''}</div><div style="font-size:0.8em;color:#666;">${k.zoo}</div><div style="color:#e65100;">🎂 ${k.birthday}</div>`;
                 list.appendChild(div);
             });
