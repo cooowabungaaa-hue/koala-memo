@@ -241,7 +241,7 @@
             z-index: 10;
         }
         
-        /* 家族さんのスタイル */
+        /* 家族さん（血統表）のスタイル */
         .pedigree-table {
             display: grid;
             grid-template-columns: 1fr 1fr 1fr;
@@ -383,14 +383,12 @@
 
     // 単一のコアラを表示する機能（詳細ページへジャンプ）
     function jumpToKoala(koalaId) {
-        // モーダルを閉じる
         document.getElementById('pedigreeModal').style.display = 'none';
         document.getElementById('siblingModal').style.display = 'none';
         
         const target = koalaData.find(k => k.id === koalaId);
         if (!target) return;
 
-        // UIをリセットしてその子だけ表示
         document.getElementById('birthdaySection').style.display = 'none';
         document.getElementById('searchContainer').style.display = 'none';
         document.getElementById('backButton').style.display = 'block';
@@ -398,7 +396,7 @@
         const list = document.getElementById('koalaList');
         const title = document.getElementById('listTitle');
         list.innerHTML = '';
-        title.style.display = 'none'; // タイトルなし
+        title.style.display = 'none';
 
         renderCard(target, list, true);
         window.scrollTo(0, 0);
@@ -443,38 +441,64 @@
         const self = koalaData.find(k => k.id === id);
         if (!self) return;
 
-        // 3つのリストを作成
-        // 1. 全きょうだい（父も母も同じ）
-        const fullSiblings = koalaData.filter(k => 
-            k.id !== self.id && // 自分以外
-            self.father_id && k.father_id === self.father_id &&
-            self.mother_id && k.mother_id === self.mother_id
-        );
+        // ★親情報が有効かどうかを判定する関数（IDがあり、かつ名前に「不明」や「オージー」を含まないこと）
+        const isValidParent = (parentId, parentName) => {
+            if (!parentId || !parentName) return false;
+            const ngWords = ["不明", "オージー", "未登録", "調査中"];
+            return !ngWords.some(word => parentName.includes(word));
+        };
 
-        // 2. 異父きょうだい（母が同じ、父が違う/不明）
-        const maternalSiblings = koalaData.filter(k => 
-            k.id !== self.id &&
-            self.mother_id && k.mother_id === self.mother_id &&
-            k.father_id !== self.father_id // 父が違う
-        );
+        const hasValidFather = isValidParent(self.father_id, self.father);
+        const hasValidMother = isValidParent(self.mother_id, self.mother);
 
-        // 3. 異母きょうだい（父が同じ、母が違う/不明）
-        const paternalSiblings = koalaData.filter(k => 
-            k.id !== self.id &&
-            self.father_id && k.father_id === self.father_id &&
-            k.mother_id !== self.mother_id // 母が違う
-        );
+        // 1. 全きょうだい（父母ともに有効で、両方一致）
+        let fullSiblings = [];
+        if (hasValidFather && hasValidMother) {
+            fullSiblings = koalaData.filter(k => 
+                k.id !== self.id &&
+                k.father_id === self.father_id &&
+                k.mother_id === self.mother_id
+            );
+        }
+
+        // 2. 異父きょうだい（母が有効で一致、父が違う/不明）
+        let maternalSiblings = [];
+        if (hasValidMother) {
+            maternalSiblings = koalaData.filter(k => 
+                k.id !== self.id &&
+                k.mother_id === self.mother_id &&
+                k.father_id !== self.father_id // 全きょうだいは含めない
+            );
+        }
+
+        // 3. 異母きょうだい（父が有効で一致、母が違う/不明）
+        let paternalSiblings = [];
+        if (hasValidFather) {
+            paternalSiblings = koalaData.filter(k => 
+                k.id !== self.id &&
+                k.father_id === self.father_id &&
+                k.mother_id !== self.mother_id // 全きょうだいは含めない
+            );
+        }
 
         // 表示用HTML生成
         const content = document.getElementById('siblingListContent');
-        content.innerHTML = ''; // クリア
+        content.innerHTML = ''; 
+
+        // 有効な親が一人もいない場合
+        if (!hasValidFather && !hasValidMother) {
+            content.innerHTML = '<p style="text-align:center; color:#999; margin-top:30px;">両親の情報が記録されていない、または不明なため、きょうだいを表示できません</p>';
+            document.getElementById('siblingModal').style.display = 'flex';
+            return;
+        }
 
         if (fullSiblings.length === 0 && maternalSiblings.length === 0 && paternalSiblings.length === 0) {
             content.innerHTML = '<p style="text-align:center; color:#999; margin-top:30px;">記録されている兄弟姉妹はいません</p>';
         } else {
-            if (fullSiblings.length > 0) renderSiblingSection(content, '💖 全きょうだい (父母同じ)', fullSiblings);
-            if (maternalSiblings.length > 0) renderSiblingSection(content, '🧡 お母さんが同じ', maternalSiblings);
-            if (paternalSiblings.length > 0) renderSiblingSection(content, '💙 お父さんが同じ', paternalSiblings);
+            // タイトルに親の名前を入れる
+            if (fullSiblings.length > 0) renderSiblingSection(content, `💖 全きょうだい（${self.father} & ${self.mother}）`, fullSiblings);
+            if (maternalSiblings.length > 0) renderSiblingSection(content, `🧡 お母さん（${self.mother}）`, maternalSiblings);
+            if (paternalSiblings.length > 0) renderSiblingSection(content, `💙 お父さん（${self.father}）`, paternalSiblings);
         }
 
         document.getElementById('siblingModal').style.display = 'flex';
@@ -514,7 +538,7 @@
         container.appendChild(section);
     }
 
-    // ▼ 家族さんを表示する機能
+    // ▼ 家族さん（旧：血統表）を表示する機能
     function showPedigree(id) {
         const self = koalaData.find(k => k.id === id);
         if (!self) return;
@@ -558,7 +582,6 @@
         document.getElementById('pedigreeModal').style.display = 'flex';
     }
 
-    // モーダルを閉じる共通関数
     function closeModals(e) {
         if (e.target.className === 'modal-overlay' || e.target.className === 'close-btn') {
             document.getElementById('pedigreeModal').style.display = 'none';
@@ -586,12 +609,11 @@
         const div = document.createElement('div');
         div.className = `koala-card ${deadClass} ${isHero ? 'parent-hero' : ''}`;
         
-        // ボタンエリア（3つに増えました）
         const buttons = koala.id ? `
             <div style="display:flex; gap:8px; margin-top:15px;">
                 <button class="family-btn" onclick="showPedigree('${koala.id}')">🧬 家族さん</button>
                 <button class="family-btn" onclick="showSiblings('${koala.id}')">🍒 きょうだい</button>
-                <button class="family-btn" onclick="showFamily('${koala.id}')">💞 こども</button>
+                <button class="family-btn" onclick="showFamily('${koala.id}')">🥰 こども</button>
             </div>
         ` : '';
 
