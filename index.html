@@ -213,7 +213,7 @@
         }
 
         .family-btn {
-            flex: 1; /* ボタンを横並びに引き伸ばす */
+            flex: 1;
             padding: 8px;
             background-color: #fff3e0;
             color: #e65100;
@@ -222,10 +222,11 @@
             cursor: pointer;
             font-weight: bold;
             display: flex; align-items: center; justify-content: center; gap: 5px;
+            font-size: 0.9em;
         }
         .family-btn:hover { background-color: #ffe0b2; }
 
-        /* ▼ 血統表モーダルの設定 */
+        /* ▼ モーダル共通設定 */
         .modal-overlay {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center;
@@ -233,16 +234,18 @@
         .modal-content {
             background: white; width: 95%; max-width: 500px; border-radius: 12px;
             padding: 20px; position: relative; max-height: 90vh; overflow-y: auto;
+            box-sizing: border-box;
         }
         .close-btn {
             position: absolute; top: 10px; right: 15px; font-size: 24px; cursor: pointer; color: #666;
+            z-index: 10;
         }
         
-        /* 血統表のグリッドレイアウト */
+        /* 家族さんのスタイル */
         .pedigree-table {
             display: grid;
-            grid-template-columns: 1fr 1fr 1fr; /* 3列（自分、親、祖父母） */
-            grid-template-rows: repeat(4, 1fr); /* 4行 */
+            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-rows: repeat(4, 1fr);
             gap: 4px; margin-top: 15px; border: 2px solid #2e7d32; background-color: #2e7d32;
         }
         .ped-cell {
@@ -253,9 +256,21 @@
         .ped-self { grid-row: 1 / span 4; font-weight: bold; font-size: 1.1em; background-color: #e8f5e9; }
         .ped-parent { grid-row: span 2; font-weight: bold; }
         .ped-gparent { grid-row: span 1; color: #666; font-size: 0.75em; }
-        
         .ped-male { border-left: 3px solid #4A90E2; }
         .ped-female { border-left: 3px solid #E24A8D; }
+
+        /* きょうだいリストのスタイル */
+        .sibling-section { margin-top: 20px; }
+        .sibling-title {
+            font-weight: bold; color: #2e7d32; border-bottom: 2px solid #a5d6a7;
+            margin-bottom: 10px; padding-bottom: 5px; font-size: 1em;
+        }
+        .sibling-item {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 8px; border-bottom: 1px solid #eee; cursor: pointer;
+        }
+        .sibling-item:hover { background-color: #f5f5f5; }
+        .sibling-name { font-weight: bold; color: #333; display: flex; align-items: center; gap: 5px; }
 
     </style>
 </head>
@@ -300,12 +315,19 @@
     <div id="loadingMsg" style="text-align:center; color:#999; grid-column:1/-1;">データを読み込んでいます...</div>
 </div>
 
-<div id="pedigreeModal" class="modal-overlay" onclick="closePedigree(event)">
+<div id="pedigreeModal" class="modal-overlay" onclick="closeModals(event)">
     <div class="modal-content">
-        <span class="close-btn" onclick="closePedigree(event)">×</span>
-        <h2 style="text-align:center; color:#2e7d32; margin:0;">🧬 血統表</h2>
-        <div id="pedigreeChart" class="pedigree-table">
-            </div>
+        <span class="close-btn" onclick="closeModals(event)">×</span>
+        <h2 style="text-align:center; color:#2e7d32; margin:0;">🧬 家族さん</h2>
+        <div id="pedigreeChart" class="pedigree-table"></div>
+    </div>
+</div>
+
+<div id="siblingModal" class="modal-overlay" onclick="closeModals(event)">
+    <div class="modal-content">
+        <span class="close-btn" onclick="closeModals(event)">×</span>
+        <h2 style="text-align:center; color:#2e7d32; margin:0;">🍒 きょうだい</h2>
+        <div id="siblingListContent"></div>
     </div>
 </div>
 
@@ -326,7 +348,6 @@
     };
 
     function loadFromSpreadsheet() {
-        // 先ほど共有いただいたURLを使用しています
         const sheetUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQi6GZ0pWmE1A0MSJBoSyHYaKvAHkgFeBRvZPmMHqHLBh53VzAr5nyJ43qOVuTj4y2xus5nzzurKmUX/pub?gid=107153803&single=true&output=csv";
 
         Papa.parse(sheetUrl, {
@@ -357,6 +378,29 @@
         currentBirthdayOffset = 0;
         showBirthdayKoalas();
         showRandomKoalas(3);
+        window.scrollTo(0, 0);
+    }
+
+    // 単一のコアラを表示する機能（詳細ページへジャンプ）
+    function jumpToKoala(koalaId) {
+        // モーダルを閉じる
+        document.getElementById('pedigreeModal').style.display = 'none';
+        document.getElementById('siblingModal').style.display = 'none';
+        
+        const target = koalaData.find(k => k.id === koalaId);
+        if (!target) return;
+
+        // UIをリセットしてその子だけ表示
+        document.getElementById('birthdaySection').style.display = 'none';
+        document.getElementById('searchContainer').style.display = 'none';
+        document.getElementById('backButton').style.display = 'block';
+        
+        const list = document.getElementById('koalaList');
+        const title = document.getElementById('listTitle');
+        list.innerHTML = '';
+        title.style.display = 'none'; // タイトルなし
+
+        renderCard(target, list, true);
         window.scrollTo(0, 0);
     }
 
@@ -394,45 +438,114 @@
         window.scrollTo(0, 0);
     }
 
-    // ▼ 血統表を表示する機能
+    // ▼ きょうだい表示機能
+    function showSiblings(id) {
+        const self = koalaData.find(k => k.id === id);
+        if (!self) return;
+
+        // 3つのリストを作成
+        // 1. 全きょうだい（父も母も同じ）
+        const fullSiblings = koalaData.filter(k => 
+            k.id !== self.id && // 自分以外
+            self.father_id && k.father_id === self.father_id &&
+            self.mother_id && k.mother_id === self.mother_id
+        );
+
+        // 2. 異父きょうだい（母が同じ、父が違う/不明）
+        const maternalSiblings = koalaData.filter(k => 
+            k.id !== self.id &&
+            self.mother_id && k.mother_id === self.mother_id &&
+            k.father_id !== self.father_id // 父が違う
+        );
+
+        // 3. 異母きょうだい（父が同じ、母が違う/不明）
+        const paternalSiblings = koalaData.filter(k => 
+            k.id !== self.id &&
+            self.father_id && k.father_id === self.father_id &&
+            k.mother_id !== self.mother_id // 母が違う
+        );
+
+        // 表示用HTML生成
+        const content = document.getElementById('siblingListContent');
+        content.innerHTML = ''; // クリア
+
+        if (fullSiblings.length === 0 && maternalSiblings.length === 0 && paternalSiblings.length === 0) {
+            content.innerHTML = '<p style="text-align:center; color:#999; margin-top:30px;">記録されている兄弟姉妹はいません</p>';
+        } else {
+            if (fullSiblings.length > 0) renderSiblingSection(content, '💖 全きょうだい (父母同じ)', fullSiblings);
+            if (maternalSiblings.length > 0) renderSiblingSection(content, '🎀 お母さんが同じ', maternalSiblings);
+            if (paternalSiblings.length > 0) renderSiblingSection(content, '🚙 お父さんが同じ', paternalSiblings);
+        }
+
+        document.getElementById('siblingModal').style.display = 'flex';
+    }
+
+    function renderSiblingSection(container, title, list) {
+        // 誕生日順に並び替え
+        list.sort((a, b) => new Date(a.birthday) - new Date(b.birthday));
+
+        const section = document.createElement('div');
+        section.className = 'sibling-section';
+        
+        const h3 = document.createElement('div');
+        h3.className = 'sibling-title';
+        h3.textContent = title;
+        section.appendChild(h3);
+
+        list.forEach(k => {
+            const isDead = checkIsDead(k);
+            const genderColor = k.gender?.includes('オス') ? '#4A90E2' : (k.gender?.includes('メス') ? '#E24A8D' : '#999');
+            const row = document.createElement('div');
+            row.className = 'sibling-item';
+            row.onclick = () => jumpToKoala(k.id); // タップでジャンプ
+            row.innerHTML = `
+                <div>
+                    <div class="sibling-name">
+                        <span style="color:${genderColor};">●</span>
+                        ${k.name} ${isDead ? '<span style="font-size:0.8em">🌈</span>' : ''}
+                    </div>
+                    <div style="font-size:0.8em; color:#666;">${k.zoo}</div>
+                </div>
+                <div style="font-size:0.85em; color:#e65100;">${k.birthday || '-'}</div>
+            `;
+            section.appendChild(row);
+        });
+
+        container.appendChild(section);
+    }
+
+    // ▼ 家族さんを表示する機能
     function showPedigree(id) {
         const self = koalaData.find(k => k.id === id);
         if (!self) return;
 
-        // 父母・祖父母を探す（いなければ空文字）
         const father = koalaData.find(k => k.id === self.father_id);
         const mother = koalaData.find(k => k.id === self.mother_id);
         
-        const ff = father ? koalaData.find(k => k.id === father.father_id) : null; // 父の父
-        const fm = father ? koalaData.find(k => k.id === father.mother_id) : null; // 父の母
-        const mf = mother ? koalaData.find(k => k.id === mother.father_id) : null; // 母の父
-        const mm = mother ? koalaData.find(k => k.id === mother.mother_id) : null; // 母の母
+        const ff = father ? koalaData.find(k => k.id === father.father_id) : null;
+        const fm = father ? koalaData.find(k => k.id === father.mother_id) : null;
+        const mf = mother ? koalaData.find(k => k.id === mother.father_id) : null;
+        const mm = mother ? koalaData.find(k => k.id === mother.mother_id) : null;
 
-        // 名前を表示するヘルパー関数
         const getName = (k, defaultText) => k ? k.name : (defaultText || "？");
         const getStyle = (k) => k ? (k.gender === 'オス' ? 'ped-male' : 'ped-female') : '';
 
-        // HTMLを組み立てる（競馬新聞風レイアウト）
         const html = `
             <div class="ped-cell ped-self ${getStyle(self)}">
                 ${self.name}
             </div>
-            
             <div class="ped-cell ped-parent ${getStyle(father)}">
                 父：${getName(father, self.father)}
             </div>
-            
             <div class="ped-cell ped-gparent ${getStyle(ff)}">
                 ${getName(ff, "父父不明")}
             </div>
             <div class="ped-cell ped-gparent ${getStyle(fm)}">
                 ${getName(fm, "父母不明")}
             </div>
-
             <div class="ped-cell ped-parent ${getStyle(mother)}">
                 母：${getName(mother, self.mother)}
             </div>
-
             <div class="ped-cell ped-gparent ${getStyle(mf)}">
                 ${getName(mf, "母父不明")}
             </div>
@@ -445,10 +558,11 @@
         document.getElementById('pedigreeModal').style.display = 'flex';
     }
 
-    // モーダルを閉じる
-    function closePedigree(e) {
+    // モーダルを閉じる共通関数
+    function closeModals(e) {
         if (e.target.className === 'modal-overlay' || e.target.className === 'close-btn') {
             document.getElementById('pedigreeModal').style.display = 'none';
+            document.getElementById('siblingModal').style.display = 'none';
         }
     }
 
@@ -463,19 +577,20 @@
         if (url) zooDisplay = `<a href="${url}" target="_blank" class="zoo-link">📍 ${koala.zoo} 🔗</a>`;
 
         const fatherDisplay = koala.father_id 
-            ? `<span class="parent-link" onclick="showFamily('${koala.father_id}')">${koala.father}</span>` 
+            ? `<span class="parent-link" onclick="jumpToKoala('${koala.father_id}')">${koala.father}</span>` 
             : (koala.father || "-");
         const motherDisplay = koala.mother_id 
-            ? `<span class="parent-link" onclick="showFamily('${koala.mother_id}')">${koala.mother}</span>` 
+            ? `<span class="parent-link" onclick="jumpToKoala('${koala.mother_id}')">${koala.mother}</span>` 
             : (koala.mother || "-");
 
         const div = document.createElement('div');
         div.className = `koala-card ${deadClass} ${isHero ? 'parent-hero' : ''}`;
         
-        // ボタンエリアを作成
+        // ボタンエリア（3つに増えました）
         const buttons = koala.id ? `
-            <div style="display:flex; gap:10px; margin-top:15px;">
-                <button class="family-btn" onclick="showPedigree('${koala.id}')">🧬 血統表</button>
+            <div style="display:flex; gap:8px; margin-top:15px;">
+                <button class="family-btn" onclick="showPedigree('${koala.id}')">🧬 血統</button>
+                <button class="family-btn" onclick="showSiblings('${koala.id}')">🍒 きょうだい</button>
                 <button class="family-btn" onclick="showFamily('${koala.id}')">👶 こども</button>
             </div>
         ` : '';
@@ -593,7 +708,7 @@
             const isDead = checkIsDead(k);
             const div = document.createElement('div');
             div.className = `birthday-card ${isDead ? 'deceased-style' : ''}`;
-            div.innerHTML = `<div style="font-weight:bold; cursor:pointer;" onclick="showFamily('${k.id}')">${k.name}${isDead ? ' (🌈)' : ''}</div><div style="font-size:0.8em; color:#666;">${k.zoo}</div><div style="color:#e65100; margin-top:5px;">🎂 ${k.birthday}</div><div style="font-size:0.8em; margin-top:3px;">${k.age}</div>`;
+            div.innerHTML = `<div style="font-weight:bold; cursor:pointer;" onclick="jumpToKoala('${k.id}')">${k.name}${isDead ? ' (🌈)' : ''}</div><div style="font-size:0.8em; color:#666;">${k.zoo}</div><div style="color:#e65100; margin-top:5px;">🎂 ${k.birthday}</div><div style="font-size:0.8em; margin-top:3px;">${k.age}</div>`;
             list.appendChild(div);
         });
         if (displayList.length === 0 && !showDeceasedBirthday) {
@@ -623,7 +738,7 @@
         }
 
         document.getElementById('listTitle').style.display = 'block';
-        document.getElementById('listTitle').textContent = '🌿 今日のおすすめ（会える子・思い出の子） 🌿';
+        document.getElementById('listTitle').textContent = '🌿 今日のおすすめコアラ 🌿';
         renderKoalas(selected);
     }
 
