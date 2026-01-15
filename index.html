@@ -241,10 +241,10 @@
             z-index: 10;
         }
         
-        /* 家族さん（血統表）のスタイル */
+        /* 家族さん（旧：血統表）のスタイル */
         .pedigree-table {
             display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-columns: 1fr 1fr 1fr; /* 左:祖父母、中:親、右:自分 */
             grid-template-rows: repeat(4, 1fr);
             gap: 4px; margin-top: 15px; border: 2px solid #2e7d32; background-color: #2e7d32;
         }
@@ -253,9 +253,23 @@
             justify-content: center; align-items: center; padding: 8px 2px;
             text-align: center; font-size: 0.8em;
         }
-        .ped-self { grid-row: 1 / span 4; font-weight: bold; font-size: 1.1em; background-color: #e8f5e9; }
-        .ped-parent { grid-row: span 2; font-weight: bold; }
-        .ped-gparent { grid-row: span 1; color: #666; font-size: 0.75em; }
+        /* ▼ 修正: 配置を逆転させる（grid-column指定） */
+        .ped-self { 
+            grid-column: 3; /* 自分は右端 */
+            grid-row: 1 / span 4; 
+            font-weight: bold; font-size: 1.1em; background-color: #e8f5e9; 
+        }
+        .ped-parent { 
+            grid-column: 2; /* 親は真ん中 */
+            grid-row: span 2; 
+            font-weight: bold; 
+        }
+        .ped-gparent { 
+            grid-column: 1; /* 祖父母は左端 */
+            grid-row: span 1; 
+            color: #666; font-size: 0.75em; 
+        }
+        
         .ped-male { border-left: 3px solid #4A90E2; }
         .ped-female { border-left: 3px solid #E24A8D; }
 
@@ -419,7 +433,7 @@
         list.innerHTML = '';
         
         title.style.display = 'block';
-        title.innerHTML = `👶 ${parent.name} の家系 (こども ${children.length}頭)`;
+        title.innerHTML = `🥰 ${parent.name} の家系 (こども ${children.length}頭)`;
         list.appendChild(title);
 
         renderCard(parent, list, true);
@@ -441,7 +455,6 @@
         const self = koalaData.find(k => k.id === id);
         if (!self) return;
 
-        // ★親情報が有効かどうかを判定する関数（IDがあり、かつ名前に「不明」や「オージー」を含まないこと）
         const isValidParent = (parentId, parentName) => {
             if (!parentId || !parentName) return false;
             const ngWords = ["不明", "オージー", "未登録", "調査中"];
@@ -451,7 +464,6 @@
         const hasValidFather = isValidParent(self.father_id, self.father);
         const hasValidMother = isValidParent(self.mother_id, self.mother);
 
-        // 1. 全きょうだい（父母ともに有効で、両方一致）
         let fullSiblings = [];
         if (hasValidFather && hasValidMother) {
             fullSiblings = koalaData.filter(k => 
@@ -461,31 +473,27 @@
             );
         }
 
-        // 2. 異父きょうだい（母が有効で一致、父が違う/不明）
         let maternalSiblings = [];
         if (hasValidMother) {
             maternalSiblings = koalaData.filter(k => 
                 k.id !== self.id &&
                 k.mother_id === self.mother_id &&
-                k.father_id !== self.father_id // 全きょうだいは含めない
+                k.father_id !== self.father_id 
             );
         }
 
-        // 3. 異母きょうだい（父が有効で一致、母が違う/不明）
         let paternalSiblings = [];
         if (hasValidFather) {
             paternalSiblings = koalaData.filter(k => 
                 k.id !== self.id &&
                 k.father_id === self.father_id &&
-                k.mother_id !== self.mother_id // 全きょうだいは含めない
+                k.mother_id !== self.mother_id 
             );
         }
 
-        // 表示用HTML生成
         const content = document.getElementById('siblingListContent');
         content.innerHTML = ''; 
 
-        // 有効な親が一人もいない場合
         if (!hasValidFather && !hasValidMother) {
             content.innerHTML = '<p style="text-align:center; color:#999; margin-top:30px;">両親の情報が記録されていない、または不明なため、きょうだいを表示できません</p>';
             document.getElementById('siblingModal').style.display = 'flex';
@@ -495,7 +503,6 @@
         if (fullSiblings.length === 0 && maternalSiblings.length === 0 && paternalSiblings.length === 0) {
             content.innerHTML = '<p style="text-align:center; color:#999; margin-top:30px;">記録されている兄弟姉妹はいません</p>';
         } else {
-            // タイトルに親の名前を入れる
             if (fullSiblings.length > 0) renderSiblingSection(content, `💖 全きょうだい（${self.father} & ${self.mother}）`, fullSiblings);
             if (maternalSiblings.length > 0) renderSiblingSection(content, `🧡 お母さん（${self.mother}）`, maternalSiblings);
             if (paternalSiblings.length > 0) renderSiblingSection(content, `💙 お父さん（${self.father}）`, paternalSiblings);
@@ -505,7 +512,6 @@
     }
 
     function renderSiblingSection(container, title, list) {
-        // 誕生日順に並び替え
         list.sort((a, b) => new Date(a.birthday) - new Date(b.birthday));
 
         const section = document.createElement('div');
@@ -521,7 +527,7 @@
             const genderColor = k.gender?.includes('オス') ? '#4A90E2' : (k.gender?.includes('メス') ? '#E24A8D' : '#999');
             const row = document.createElement('div');
             row.className = 'sibling-item';
-            row.onclick = () => jumpToKoala(k.id); // タップでジャンプ
+            row.onclick = () => jumpToKoala(k.id); 
             row.innerHTML = `
                 <div>
                     <div class="sibling-name">
@@ -538,7 +544,7 @@
         container.appendChild(section);
     }
 
-    // ▼ 家族さん（旧：血統表）を表示する機能
+    // ▼ 家族さんを表示する機能
     function showPedigree(id) {
         const self = koalaData.find(k => k.id === id);
         if (!self) return;
@@ -554,6 +560,7 @@
         const getName = (k, defaultText) => k ? k.name : (defaultText || "？");
         const getStyle = (k) => k ? (k.gender === 'オス' ? 'ped-male' : 'ped-female') : '';
 
+        // HTML生成（CSSで配置を変えるため生成順は変更なし）
         const html = `
             <div class="ped-cell ped-self ${getStyle(self)}">
                 ${self.name}
