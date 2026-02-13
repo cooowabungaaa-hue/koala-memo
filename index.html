@@ -545,17 +545,30 @@
             text-align: center;
         }
 
-        .welcome-banner {
-            background-color: #e8f5e9;
-            color: #2e7d32;
-            padding: 15px;
-            border-radius: 12px;
-            margin: 0 auto 20px auto;
-            max-width: 600px;
-            font-weight: 700;
-            text-align: center;
-            font-size: 1.1em;
+        /* Welcome Area Styling (Unified) */
+        .welcome-bar-area {
             display: none;
+            max-width: 650px;
+            margin: 0 auto 15px auto;
+            background-color: #e8f5e9;
+            padding: 8px 16px;
+            border-radius: 50px;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            border: 1px solid #c8e6c9;
+        }
+
+        .welcome-text {
+            color: #2e7d32;
+            font-weight: 700;
+            font-size: 0.9em;
+            margin: 0;
+            flex: 1;
+            text-align: left;
+            line-height: 1.3;
+            display: block !important;
+            /* Ensure visibility */
         }
 
         .fortune-grid {
@@ -595,6 +608,7 @@
             grid-column: 1 / -1;
         }
 
+        /* My Page Button (Compact Oval) */
         .mypage-btn {
             display: inline-block;
             width: auto;
@@ -615,29 +629,6 @@
         .mypage-btn:hover {
             background-color: #256b29;
             transform: translateY(-1px);
-        }
-
-        .welcome-container {
-            display: none;
-            max-width: 650px;
-            margin: 0 auto 25px auto;
-            background-color: #e8f5e9;
-            padding: 8px 16px;
-            border-radius: 50px;
-            align-items: center;
-            justify-content: space-between;
-            gap: 12px;
-            border: 1px solid #c8e6c9;
-        }
-
-        .welcome-banner {
-            color: #2e7d32;
-            font-weight: 700;
-            font-size: 0.9em;
-            margin: 0;
-            flex: 1;
-            text-align: left;
-            line-height: 1.3;
         }
 
         .mypage-input-group {
@@ -662,8 +653,8 @@
         <p class="subtitle">Japan Koala Database</p>
     </header>
 
-    <div id="welcomeContainer" class="welcome-container">
-        <div id="welcomeBanner" class="welcome-banner"></div>
+    <div id="welcomeContainer" class="welcome-bar-area">
+        <div id="welcomeBanner" class="welcome-text"></div>
         <button class="mypage-btn" onclick="navigate('mypage')">📛 my page</button>
     </div>
 
@@ -1415,7 +1406,15 @@
 
         function changeBirthdayMonth(o) { currentBirthdayOffset = o; showBirthdayKoalas(); }
 
-        if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => { });
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('service-worker.js')
+                .then(reg => {
+                    console.log('SW registered', reg);
+                    // 必要に応じて手動で更新をチェック
+                    reg.update();
+                })
+                .catch(err => console.log('SW registration failed', err));
+        }
         window.addEventListener('load', () => {
             loadFromSpreadsheet();
             loadProfile();
