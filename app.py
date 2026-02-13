@@ -30,104 +30,81 @@ STYLING = """
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;700&family=Noto+Sans+JP:wght@400;700&display=swap');
 
-    /* Global Body Background */
+    /* Global Page Styling */
     .stApp { background-color: #f4f7f6; color: #333; font-family: "Helvetica Neue", Arial, sans-serif; }
-    
-    /* Center the main content (approx 1000px) */
-    .block-container { max-width: 1000px !important; padding-top: 2rem !important; }
+    .block-container { max-width: 1000px !important; padding-top: 1.5rem !important; }
 
-    /* Header & General */
-    [data-testid="stHeader"] { background: rgba(0,0,0,0); }
-    .main-header { 
-        text-align: center; margin-bottom: 0px; color: #2e7d32; 
-        font-size: 1.8em; font-weight: bold; cursor: pointer;
-    }
-    .subtitle { text-align: center; color: #666; font-size: 0.8em; margin-top: 5px; margin-bottom: 25px; }
+    /* Header Styling */
+    .header-container { text-align: center; margin-bottom: 30px; }
+    .main-header { color: #2e7d32; font-size: 2.2em; font-weight: bold; cursor: pointer; margin-bottom: 5px; }
+    .subtitle-text { color: #888; font-size: 0.9em; margin-bottom: 20px; }
 
-    /* Top Page Nav Buttons */
-    div.stButton > button {
+    /* Nav Buttons (Home/Back) */
+    div[data-testid="stColumn"] button {
         border-radius: 20px !important;
         background-color: #666 !important;
         color: white !important;
         border: none !important;
-        padding: 8px 20px !important;
         font-size: 0.9em !important;
-        font-weight: normal !important;
-        transition: opacity 0.2s !important;
     }
-    div.stButton > button:hover { opacity: 0.8; color: white !important; }
 
-    /* Birthday Section (Orange Box) */
-    .birthday-section-box {
+    /* Birthday Section (Unified Box) */
+    [data-testid="stVerticalBlock"] > div:has(.birthday-box-marker) {
         background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
-        border-radius: 12px; padding: 15px; margin-bottom: 30px; border: 2px solid #ffcc80; 
+        border-radius: 12px; padding: 25px; margin-bottom: 30px; border: 2px solid #ffcc80;
         text-align: center;
     }
-    .birthday-title-text { color: #e65100; font-weight: bold; font-size: 1.1em; margin-bottom: 12px; }
+    .birthday-title-text { color: #e65100; font-weight: bold; font-size: 1.25em; margin-bottom: 20px; }
     
-    /* Search Container */
-    .search-group-box {
+    /* Search Group Styling */
+    [data-testid="stVerticalBlock"] > div:has(.search-box-marker) {
         background: white; padding: 15px; border-radius: 12px;
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05); margin-bottom: 12px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05); margin-bottom: 15px;
     }
-    .search-label-text { font-size: 0.85em; font-weight: bold; color: #2e7d32; margin-bottom: 8px; display: block; }
+    .search-label-text { font-size: 0.9em; font-weight: bold; color: #2e7d32; margin-bottom: 10px; display: block; }
 
-    /* Card Styling */
+    /* Koala Card Styling */
     .koala-card {
         background: white; padding: 20px; border-radius: 12px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-left: 5px solid #2e7d32;
-        margin-bottom: 0px; color: #333; transition: transform 0.2s;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.06); border-left: 5px solid #2e7d32;
+        margin-bottom: 10px; color: #333; position: relative;
     }
-    .deceased-style { background-color: #f0f0f0; opacity: 0.9; border-color: #ccc !important; color: #666; }
+    .deceased-style { background-color: #f0f0f0; opacity: 0.95; border-color: #ccc !important; }
     .parent-hero { background-color: #e8f5e9; border: 2px solid #2e7d32; border-left: 5px solid #2e7d32; }
 
-    .koala-name { font-size: 1.4em; font-weight: bold; color: #333; display: inline-block; margin-right: 8px; }
-    .badge { 
-        font-size: 0.75em; padding: 3px 8px; border-radius: 12px; color: white; 
-        display: inline-block; font-weight: normal; margin-right: 4px;
-    }
+    .koala-name { font-size: 1.4em; font-weight: bold; color: #333; margin-bottom: 5px; display: block; }
+    .badge-container { margin-bottom: 10px; }
+    .badge { font-size: 0.75em; padding: 3px 10px; border-radius: 12px; color: white; margin-right: 5px; }
     .male { background-color: #4A90E2; }
     .female { background-color: #E24A8D; }
-    .other { background-color: #999; }
     .age { background-color: #2ecc71; }
+    
     .deceased-badge { background-color: #999; }
-
+    
     .koala-zoo {
         display: inline-block; background-color: #e8f5e9; color: #2e7d32;
-        padding: 4px 10px; border-radius: 4px; font-size: 0.9em; font-weight: bold;
-        margin-bottom: 12px; margin-top: 8px;
+        padding: 4px 12px; border-radius: 4px; font-size: 0.9em; font-weight: bold;
+        margin: 10px 0; border: 1px solid #c8e6c9;
     }
-    .deceased-style .koala-zoo { background-color: #eee; color: #666; }
-
-    .detail-grid { display: grid; grid-template-columns: auto 1fr; gap: 5px 10px; font-size: 0.95em; color: #444; }
-    .memo-box {
-        font-size: 0.9em; margin-top: 12px; background: #f9f9f9; padding: 10px; 
-        border-radius: 6px; color: #555; line-height: 1.5;
-    }
+    .detail-grid { display: grid; grid-template-columns: 25px 1fr; gap: 8px; font-size: 0.95em; color: #555; }
     
-    /* Pedigree Table */
-    .pedigree-table {
-        display: grid; grid-template-columns: 1fr 1fr 1fr; grid-template-rows: repeat(4, 1fr);
-        gap: 4px; margin-top: 15px; border: 2px solid #2e7d32; background-color: #2e7d32; width: 100%;
-    }
-    .ped-cell { background-color: #f9f9f9; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 8px 2px; text-align: center; font-size: 0.8em; }
-    .ped-pos-self { font-size: 1.1em; background-color: #e8f5e9; font-weight: bold; }
-    .ped-male { border-left: 3px solid #4A90E2; }
-    .ped-female { border-left: 3px solid #E24A8D; }
-
-    /* Custom Buttons in Cards (Approximation) */
-    .stButton > button[key^="ped_"], .stButton > button[key^="sib_"], .stButton > button[key^="fam_"] {
+    /* Target buttons that follow a koala-card-marker */
+    [data-testid="stVerticalBlock"] > div:has(.koala-card) + div[data-testid="stHorizontalBlock"] button {
         background-color: #fff3e0 !important;
         color: #e65100 !important;
         border: 1px solid #ffcc80 !important;
         border-radius: 6px !important;
         font-weight: bold !important;
-        font-size: 0.9em !important;
+        font-size: 0.85em !important;
         height: 38px !important;
     }
-    .stButton > button[key^="ped_"]:hover, .stButton > button[key^="sib_"]:hover, .stButton > button[key^="fam_"]:hover {
-        background-color: #ffe0b2 !important;
+    .insta-btn-link {
+        display: flex; width: 100%; height: 38px; justify-content: center; align-items: center;
+        background-color: #fce4ec; color: #d81b60 !important; border: 1px solid #f8bbd0;
+        border-radius: 6px; font-weight: bold; font-size: 0.85em; text-decoration: none;
     }
+</style>
+</style>
 
     /* Fixed Birthday Scrollbar */
     .birthday-list-scroll {
@@ -257,23 +234,22 @@ def render_koala_card(koala, section_key, is_hero=False):
     st.markdown(html, unsafe_allow_html=True)
     
     # Buttons Area
-    c1, c2, c3, c4 = st.columns(4)
-    with c1:
+    c = st.columns(4)
+    with c[0]:
         if st.button("家族さん", key=f"ped_{section_key}_{koala['id']}", use_container_width=True):
             st.session_state.modal_mode = "pedigree"
             st.session_state.modal_target_id = koala['id']
             st.rerun()
-    with c2:
+    with c[1]:
         if st.button("きょうだい", key=f"sib_{section_key}_{koala['id']}", use_container_width=True):
             st.session_state.modal_mode = "siblings"
             st.session_state.modal_target_id = koala['id']
             st.rerun()
-    with c3:
+    with c[2]:
         if st.button("こども", key=f"fam_{section_key}_{koala['id']}", use_container_width=True):
             navigate_to('family', koala['id'])
-    with c4:
-        # Insta button with specific style
-        st.markdown(f'<a href="{insta_url}" target="_blank" style="text-decoration:none;"><button style="width:100%; height:38px; border:1px solid #f8bbd0; border-radius:6px; background-color:#fce4ec; color:#d81b60; font-weight:bold; font-size:0.9em; cursor:pointer; display:flex; align-items:center; justify-content:center;">Insta</button></a>', unsafe_allow_html=True)
+    with c[3]:
+        st.markdown(f'<a href="{insta_url}" target="_blank" class="insta-btn-link">Insta</a>', unsafe_allow_html=True)
 
 # --- Main Page Execution ---
 def main():
@@ -296,7 +272,12 @@ def main():
     selected_id = st.query_params.get("id")
 
     # 4. Header & Navigation UI
-    st.markdown('<div class="main-header" onclick="window.location.href=\'/\'">🐨 コアラメモ 🐨</div>', unsafe_allow_html=True)
+    st.markdown("""
+    <div class="header-container">
+        <div class="main-header" onclick="window.location.href='/'">🐨 コアラメモ 🐨</div>
+        <div class="subtitle-text">Japan Koala Database</div>
+    </div>
+    """, unsafe_allow_html=True)
     
     col_n1, col_n2 = st.columns([1, 4])
     with col_n1:
@@ -408,64 +389,73 @@ def main():
         n_month = (datetime.datetime.now().replace(day=1) + datetime.timedelta(days=32)).month
         m_target = c_month if st.session_state.birthday_offset == 0 else n_month
 
-        st.markdown('<div class="birthday-section-box">', unsafe_allow_html=True)
-        st.markdown(f'<div class="birthday-title-text">🎉 {m_target}月のお誕生日 🎉</div>', unsafe_allow_html=True)
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("今月", key="btn_this_month", type="primary" if st.session_state.birthday_offset == 0 else "secondary"):
-                st.session_state.birthday_offset = 0
-                st.rerun()
-        with col2:
-            if st.button("来月", key="btn_next_month", type="primary" if st.session_state.birthday_offset == 1 else "secondary"):
-                st.session_state.birthday_offset = 1
-                st.rerun()
-
-        def is_bday_match(bday_str):
-            if not bday_str or bday_str == '-': return False
-            parts = bday_str.replace('/', '-').split('-')
-            if len(parts) >= 2: return int(parts[1]) == m_target
-            return False
+        with st.container():
+            st.write('<span class="birthday-box-marker"></span>', unsafe_allow_html=True)
+            st.markdown(f'<div class="birthday-title-text">🎉 {m_target}月のお誕生日 🎉</div>', unsafe_allow_html=True)
             
-        bd_koalas = df[df['birthday'].apply(is_bday_match)]
-        dead_cnt = len([k for _, k in bd_koalas.iterrows() if check_is_dead(k)])
-        
-        if not st.session_state.show_dead_birthday:
-            bd_koalas = bd_koalas[bd_koalas.apply(lambda x: not check_is_dead(x), axis=1)]
-            
-        if bd_koalas.empty:
-            st.write("該当するコアラはいません")
-        else:
-            cols = st.columns(min(len(bd_koalas), 4))
-            for idx, (_, k) in enumerate(bd_koalas.iterrows()):
-                with cols[idx % 4]:
-                    d_style = "deceased-style" if check_is_dead(k) else ""
-                    st.markdown(f"""
-                    <div class="koala-card {d_style}" style="padding:10px; font-size:0.9em; border-left:3px solid #ff9800;">
-                        <div style="font-weight:bold;">{k['name']}</div>
-                        <div style="font-size:0.8em;color:#666;">{k['zoo']}</div>
-                        <div style="color:#e65100;">{k['birthday']}</div>
-                    </div>
-                    """, unsafe_allow_html=True)
+            # Simple button row
+            b_col1, b_col2 = st.columns([1,1])
+            with b_col1:
+                st.button("今月", key="btn_this_month", type="primary" if st.session_state.birthday_offset == 0 else "secondary", use_container_width=True)
+                if st.session_state.get("btn_this_month"):
+                    st.session_state.birthday_offset = 0
+                    st.rerun()
+            with b_col2:
+                st.button("来月", key="btn_next_month", type="primary" if st.session_state.birthday_offset == 1 else "secondary", use_container_width=True)
+                if st.session_state.get("btn_next_month"):
+                    st.session_state.birthday_offset = 1
+                    st.rerun()
 
-        if dead_cnt > 0:
-            btn_txt = "✕ 元気な子のみ表示" if st.session_state.show_dead_birthday else f"🌈 虹のむこうの子（{dead_cnt}頭）も表示"
-            if st.button(btn_txt, key="btn_toggle_dead"):
-                st.session_state.show_dead_birthday = not st.session_state.show_dead_birthday
-                st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
+            def is_bday_match(bday_str):
+                if not bday_str or bday_str == '-': return False
+                parts = bday_str.replace('/', '-').split('-')
+                if len(parts) >= 2: return int(parts[1]) == m_target
+                return False
+                
+            bd_koalas = df[df['birthday'].apply(is_bday_match)]
+            dead_cnt = len([k for _, k in bd_koalas.iterrows() if check_is_dead(k)])
+            
+            if not st.session_state.show_dead_birthday:
+                bd_koalas = bd_koalas[bd_koalas.apply(lambda x: not check_is_dead(x), axis=1)]
+                
+            if bd_koalas.empty:
+                st.write("該当するコアラはいません")
+            else:
+                # Custom horizontally scrollable list approximation
+                st.write('<div class="birthday-list-scroll">', unsafe_allow_html=True)
+                cols_b = st.columns(min(len(bd_koalas), 4))
+                for idx, (_, k) in enumerate(bd_koalas.iterrows()):
+                    with cols_b[idx % 4]:
+                        d_style = "deceased-style" if check_is_dead(k) else ""
+                        st.markdown(f"""
+                        <div class="koala-card {d_style}" style="padding:10px; font-size:0.9em; border-left:3px solid #ff9800; border-radius:8px; margin-bottom:5px;">
+                            <div style="font-weight:bold;">{k['name']}</div>
+                            <div style="font-size:0.8em;color:#666;">{k['zoo']}</div>
+                            <div style="color:#e65100;">{k['birthday']}</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                st.write('</div>', unsafe_allow_html=True)
+
+            if dead_cnt > 0:
+                btn_txt = "✕ 元気な子のみ表示" if st.session_state.show_dead_birthday else f"🌈 虹のむこうの子（{dead_cnt}頭）も表示"
+                if st.button(btn_txt, key="btn_toggle_dead"):
+                    st.session_state.show_dead_birthday = not st.session_state.show_dead_birthday
+                    st.rerun()
             
         # Search Section
-        st.markdown('<div class="search-group-box">', unsafe_allow_html=True)
-        st.markdown('<label class="search-label-text">🔍 なまえで検索</label>', unsafe_allow_html=True)
-        search_name = st.text_input("なまえで検索", placeholder="例：こまち、きらら...", key="search_input", label_visibility="collapsed")
-        st.markdown('</div>', unsafe_allow_html=True)
+        with st.container():
+            st.write('<span class="search-box-marker"></span>', unsafe_allow_html=True)
+            st.markdown('<label class="search-label-text">🔍 なまえで検索</label>', unsafe_allow_html=True)
+            st.text_input("なまえで検索", placeholder="例：こまち、きらら...", key="search_input", label_visibility="collapsed")
         
-        st.markdown('<div class="search-group-box">', unsafe_allow_html=True)
-        st.markdown('<label class="search-label-text">📍 動物園から探す</label>', unsafe_allow_html=True)
-        zoos = [""] + sorted(list(set(df['zoo'].dropna())))
-        search_zoo = st.selectbox("動物園から探す", zoos, key="search_zoo", label_visibility="collapsed")
-        st.markdown('</div>', unsafe_allow_html=True)
+        with st.container():
+            st.write('<span class="search-box-marker"></span>', unsafe_allow_html=True)
+            st.markdown('<label class="search-label-text">📍 動物園から探す</label>', unsafe_allow_html=True)
+            zoos = [""] + sorted(list(set(df['zoo'].dropna())))
+            st.selectbox("動物園から探す", zoos, key="search_zoo", label_visibility="collapsed")
+
+        search_name = st.session_state.get("search_input")
+        search_zoo = st.session_state.get("search_zoo")
         
         is_search = bool(search_name or search_zoo)
         if is_search:
