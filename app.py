@@ -403,17 +403,20 @@ def main():
             is_search = False
             
             # 1日2回（午前・午後）の更新に抑制するためのシード値を生成
+            import zlib
             now = datetime.datetime.now()
             am_pm = "AM" if now.hour < 12 else "PM"
-            time_seed = f"{now.strftime('%Y-%m-%d')}-{am_pm}"
+            time_seed_str = f"{now.strftime('%Y-%m-%d')}-{am_pm}"
+            # hash()は実行ごとに変わる可能性があるため、zlib.crc32で固定値を生成
+            time_seed = zlib.crc32(time_seed_str.encode())
             
             # シードを使ってサンプリングを固定
             living = df[df.apply(lambda x: not check_is_dead(x), axis=1)]
             dead = df[df.apply(lambda x: check_is_dead(x), axis=1)]
             
             # livingから2頭、deadから1頭を時間帯固定でサンプリング
-            recs_living = living.sample(n=min(len(living), 2), random_state=hash(time_seed) % (2**32))
-            recs_dead = dead.sample(n=min(len(dead), 1), random_state=hash(time_seed + "dead") % (2**32))
+            recs_living = living.sample(n=min(len(living), 2), random_state=time_seed % (2**32))
+            recs_dead = dead.sample(n=min(len(dead), 1), random_state=zlib.crc32((time_seed_str + "dead").encode()) % (2**32))
             
             recommended_ids = [str(r['id']) for r in recs_living.to_dict('records')] + \
                              [str(r['id']) for r in recs_dead.to_dict('records')]
