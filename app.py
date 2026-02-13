@@ -305,6 +305,9 @@ def navigate_to(view, koala_id=None):
                 if len(st.session_state.history) > 10: st.session_state.history.pop(0)
         
         st.query_params.update({"view": "family", "id": str(koala_id)})
+    else:
+        # mypage など他のビューに対応
+        st.query_params.update({"view": view})
     
     # モーダルなどの状態を完全にリセット
     st.session_state.modal_mode = None
