@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import datetime
+import zlib
 
 # --- Configuration ---
 st.set_page_config(
@@ -57,7 +58,6 @@ STYLING = """
 
     .detail-grid { display: grid; grid-template-columns: auto 1fr; gap: 2px 8px; font-size: 0.85em; color: #444; }
     
-    /* Buttons in Streamlit columns can be tight, custom styling not always applied to inner buttons easily */
     /* Birthday Section */
     .birthday-section {
         background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
@@ -92,25 +92,30 @@ STYLING = """
 # --- Helpers ---
 @st.cache_data
 def load_data():
-    df = pd.read_csv(DATA_URL)
-    df = df[df['name'].notna() & (df['name'] != "")]
-    df['id'] = df['id'].astype(str)
-    # インデックスをIDで固定し、ソートすることでサンプリングの安定性を高める
-    df = df.set_index('id', drop=False).sort_index()
-    df['father_id'] = df['father_id'].fillna("").astype(str).replace("nan", "").replace("0.0", "")
-    df['mother_id'] = df['mother_id'].fillna("").astype(str).replace("nan", "").replace("0.0", "")
-    df['father'] = df['father'].fillna("不明")
-    df['mother'] = df['mother'].fillna("不明")
-    df['memo'] = df['memo'].fillna("")
-    df['zoo'] = df['zoo'].fillna("-")
-    df['gender'] = df['gender'].fillna("不明")
-    df['birthday'] = df['birthday'].fillna("-")
-    df['age'] = df['age'].fillna("-")
-    df['death'] = df['death'].fillna("")
-    return df
+    try:
+        df = pd.read_csv(DATA_URL)
+        df = df[df['name'].notna() & (df['name'] != "")]
+        df['id'] = df['id'].astype(str)
+        # データの並び順を固定することで、サンプリングを安定させる
+        df = df.set_index('id', drop=False).sort_index()
+        
+        df['father_id'] = df['father_id'].fillna("").astype(str).replace("nan", "").replace("0.0", "")
+        df['mother_id'] = df['mother_id'].fillna("").astype(str).replace("nan", "").replace("0.0", "")
+        df['father'] = df['father'].fillna("不明")
+        df['mother'] = df['mother'].fillna("不明")
+        df['memo'] = df['memo'].fillna("")
+        df['zoo'] = df['zoo'].fillna("-")
+        df['gender'] = df['gender'].fillna("不明")
+        df['birthday'] = df['birthday'].fillna("-")
+        df['age'] = df['age'].fillna("-")
+        df['death'] = df['death'].fillna("")
+        return df
+    except Exception as e:
+        st.error(f"データの読み込み中にエラーが発生しました: {e}")
+        return pd.DataFrame()
 
 def check_is_dead(row):
-    return (str(row['death']).strip() != "") or (row['age'] == "没年齢不明")
+    return (str(row.get('death', '')).strip() != "") or (row.get('age') == "没年齢不明")
 
 def get_gender_class(gender):
     if "オス" in str(gender): return "male"
@@ -121,7 +126,53 @@ def get_pedigree_style(k):
     if pd.isna(k) or k is None: return ""
     return "ped-male" if "オス" in str(k.get('gender', '')) else "ped-female"
 
-# --- View Helpers ---
+@st.cache_data(ttl=3600*12)
+def get_recommended_ids_cached(df_indexed, seed_str):
+    if df_indexed.empty: return []
+    seed = zlib.crc32(seed_str.encode())
+    
+    living = df_indexed[df_indexed.apply(lambda x: not check_is_dead(x), axis=1)]
+    dead = df_indexed[df_indexed.apply(lambda x: check_is_dead(x), axis=1)]
+    
+    recs = []
+    if not living.empty:
+        recs.extend(living.sample(n=min(len(living), 2), random_state=seed % (2**32))['id'].tolist())
+    if not dead.empty:
+        recs.extend(dead.sample(n=min(len(dead), 1), random_state=zlib.crc32((seed_str + "dead").encode()) % (2**32))['id'].tolist())
+    return recs
+
+# --- Navigation Functions ---
+def navigate_to(view, koala_id=None):
+    if view == 'home':
+        st.query_params.clear()
+        st.session_state.history = []
+    elif view == 'family':
+        # 履歴の更新（重複や直近の戻りなどを考慮）
+        current_id = st.query_params.get("id")
+        if current_id and current_id != str(koala_id):
+            if 'history' not in st.session_state: st.session_state.history = []
+            if not st.session_state.history or st.session_state.history[-1] != current_id:
+                st.session_state.history.append(current_id)
+                if len(st.session_state.history) > 10: st.session_state.history.pop(0)
+        
+        st.query_params.update({"view": "family", "id": str(koala_id)})
+    
+    # モーダルなどの状態を完全にリセット
+    st.session_state.modal_mode = None
+    st.session_state.modal_target_id = None
+    st.rerun()
+
+def go_back():
+    if 'history' in st.session_state and st.session_state.history:
+        prev_id = st.session_state.history.pop()
+        st.query_params.update({"view": "family", "id": prev_id})
+    else:
+        st.query_params.clear()
+    
+    st.session_state.modal_mode = None
+    st.rerun()
+
+# --- View Components ---
 def render_koala_card(koala, section_key, is_hero=False):
     is_dead = check_is_dead(koala)
     dead_class = "deceased-style" if is_dead else ""
@@ -158,9 +209,7 @@ def render_koala_card(koala, section_key, is_hero=False):
     st.markdown(html, unsafe_allow_html=True)
     
     # Buttons Area
-    # Use columns for buttons to keep them compact
     c1, c2, c3, c4 = st.columns(4)
-    # Important: FIXED KEYS using section_key and koala ID
     with c1:
         if st.button("🧬 家族", key=f"ped_{section_key}_{koala['id']}"):
             st.session_state.modal_mode = "pedigree"
@@ -173,106 +222,58 @@ def render_koala_card(koala, section_key, is_hero=False):
             st.rerun()
     with c3:
         if st.button("🥰 子供", key=f"fam_{section_key}_{koala['id']}"):
-            go_to_family(koala['id'])
+            navigate_to('family', koala['id'])
     with c4:
         st.markdown(f'<a href="{insta_url}" target="_blank" style="text-decoration:none; display:flex; align-items:center; justify-content:center; height:100%;"><button style="width:100%; border:1px solid #f8bbd0; background-color:#fce4ec; color:#d81b60; padding:0.25rem 0.5rem; font-size:0.8rem; border-radius:0.25rem; cursor:pointer;">📷</button></a>', unsafe_allow_html=True)
 
-
-# --- Navigation ---
-def go_home():
-    st.session_state.view = 'home'
-    st.session_state.selected_id = None
-    st.session_state.modal_mode = None
-    st.query_params.clear()
-    st.rerun()
-
-def go_to_family(id_):
-    # 履歴管理
-    if 'history' not in st.session_state:
-        st.session_state.history = []
-    
-    # 現在のIDを履歴に追加（重複排除）
-    if st.session_state.selected_id and st.session_state.selected_id != str(id_):
-        if not st.session_state.history or st.session_state.history[-1] != st.session_state.selected_id:
-            st.session_state.history.append(st.session_state.selected_id)
-            if len(st.session_state.history) > 10:
-                st.session_state.history.pop(0)
-
-    st.session_state.view = 'family'
-    st.session_state.selected_id = str(id_)
-    st.session_state.modal_mode = None
-    st.query_params.update({"view": "family", "id": str(id_)})
-    st.rerun()
-
-def go_back():
-    if 'history' in st.session_state and st.session_state.history:
-        prev_id = st.session_state.history.pop()
-        st.session_state.view = 'family'
-        st.session_state.selected_id = prev_id
-        st.query_params.update({"view": "family", "id": prev_id})
-    else:
-        go_home()
-    st.rerun()
-
-# --- Main App ---
+# --- Main Page Execution ---
 def main():
     st.markdown(STYLING, unsafe_allow_html=True)
     
-    # State Init
-    if 'view' not in st.session_state: st.session_state.view = 'home'
-    if 'selected_id' not in st.session_state: st.session_state.selected_id = None
-    if 'modal_mode' not in st.session_state: st.session_state.modal_mode = None 
+    # 1. State Initialization
+    if 'history' not in st.session_state: st.session_state.history = []
     if 'birthday_offset' not in st.session_state: st.session_state.birthday_offset = 0
     if 'show_dead_birthday' not in st.session_state: st.session_state.show_dead_birthday = False
-    if 'history' not in st.session_state: st.session_state.history = []
+    if 'modal_mode' not in st.session_state: st.session_state.modal_mode = None
 
-    # Synchronization with Query Params (Browser Back/Forward support)
-    q_view = st.query_params.get("view", "home")
-    q_id = st.query_params.get("id")
-    
-    # セッション状態とURLのパラメータが食い違っている場合、URLを優先する
-    if q_view != st.session_state.view or q_id != st.session_state.selected_id:
-        st.session_state.view = q_view
-        st.session_state.selected_id = q_id
-
+    # 2. Data Loading
     df = load_data()
-    
-    # データのロードに失敗した（空だった）場合の最小限のガード
     if df.empty:
-        st.error("データの読み込みに失敗したか、データが空です。")
-        st.stop()
+        st.warning("現在データを読み込むことができません。しばらく時間をおいてから再度お試しください。")
+        return
+
+    # 3. Routing from URL (Single Source of Truth)
+    view = st.query_params.get("view", "home")
+    selected_id = st.query_params.get("id")
+
+    # 4. Header & Navigation UI
+    st.markdown('<div class="main-header" onclick="window.location.href=\'/\'">🐨 コアラメモ 🐨</div>', unsafe_allow_html=True)
     
-    # Header (clickable to home)
-    st.markdown('<div class="main-header">🐨 コアラメモ 🐨</div>', unsafe_allow_html=True)
-    
-    col_nav1, col_nav2 = st.columns([1, 4])
-    with col_nav1:
-        if st.button("🏠 ホーム", key="home_btn", use_container_width=True):
-            go_home()
-    with col_nav2:
-        if st.session_state.view == 'family' and st.session_state.history:
-            if st.button("⬅️ 前のページに戻る", key="back_btn", use_container_width=True):
+    col_n1, col_n2 = st.columns([1, 4])
+    with col_n1:
+        if st.button("🏠 ホーム", use_container_width=True, key="global_home"):
+            navigate_to('home')
+    with col_n2:
+        if view == 'family' and st.session_state.history:
+            if st.button("⬅️ 前のページに戻る", use_container_width=True, key="global_back"):
                 go_back()
-    
-    # --- Modals Overlay ---
-    if st.session_state.modal_mode:
-        k_id = st.session_state.modal_target_id
-        target_rows = df[df['id'] == k_id]
-        
-        if not target_rows.empty:
-            target = target_rows.iloc[0]
+
+    # 5. Modals (Overlays)
+    if st.session_state.get('modal_mode'):
+        m_id = st.session_state.get('modal_target_id')
+        if m_id in df.index:
+            target = df.loc[m_id]
             
-            # Using st.dialog (Streamlit 1.34+)
             @st.dialog("詳細情報", width="small")
-            def show_modal():
-                if st.session_state.modal_mode == "pedigree":
-                    st.subheader(f"🧬 {target['name']} の家族さん")
-                    # Pedigree Logic
-                    def get_k(kid): 
-                        rows = df[df['id'] == str(kid)]
-                        return rows.iloc[0] if not rows.empty else None
+            def show_modal_dialog(koala):
+                mode = st.session_state.modal_mode
+                if mode == "pedigree":
+                    st.subheader(f"🧬 {koala['name']} の家族さん")
                     
-                    s = target
+                    def get_k(kid): 
+                        return df.loc[kid] if kid in df.index else None
+                    
+                    s = koala
                     f = get_k(s['father_id'])
                     m = get_k(s['mother_id'])
                     ff = get_k(f['father_id']) if f is not None else None
@@ -296,11 +297,10 @@ def main():
                     """
                     st.markdown(html, unsafe_allow_html=True)
                     
-                elif st.session_state.modal_mode == "siblings":
-                    st.subheader(f"🍒 {target['name']} のきょうだい")
-                    siblings = df[df['id'] != k_id]
-                    f_id = target['father_id']
-                    m_id = target['mother_id']
+                elif mode == "siblings":
+                    st.subheader(f"🍒 {koala['name']} のきょうだい")
+                    siblings = df[df.index != koala['id']]
+                    f_id, m_id = koala['father_id'], koala['mother_id']
                     
                     full = siblings[(siblings['father_id'] == f_id) & (siblings['mother_id'] == m_id) & (f_id != "") & (m_id != "")]
                     pat = siblings[(siblings['father_id'] == f_id) & (siblings['mother_id'] != m_id) & (f_id != "")]
@@ -321,19 +321,40 @@ def main():
                     if f_id == "" and m_id == "":
                         st.write("両親の情報がないため表示できません")
                     else:
-                        render_sib_list(f"💖 全きょうだい ({target['father']}&{target['mother']})", full)
-                        render_sib_list(f"🧡 お母さん ({target['mother']})", mat)
-                        render_sib_list(f"💙 お父さん ({target['father']})", pat)
+                        render_sib_list(f"💖 全きょうだい ({koala['father']}&{koala['mother']})", full)
+                        render_sib_list(f"🧡 お母さん ({koala['mother']})", mat)
+                        render_sib_list(f"💙 お父さん ({koala['father']})", pat)
             
-            show_modal()
-            # Clear modal state after triggering to prevent indefinite reappearance
-            st.session_state.modal_mode = None
-            st.session_state.modal_target_id = None
+            show_modal_dialog(target)
+            st.session_state.modal_mode = None # Reset after triggering
 
-    # --- Router ---
-    if st.session_state.view == 'home':
-        
-        # Birthday
+    # 6. Main Routing View
+    if view == 'family':
+        if selected_id not in df.index:
+            st.error("お探しのコアラの情報が見つかりませんでした。ホームに戻ります。")
+            navigate_to('home')
+        else:
+            p = df.loc[selected_id]
+            children = df[(df['father_id'] == p['id']) | (df['mother_id'] == p['id'])]
+            
+            st.markdown(f"### 🥰 {p['name']} の詳細 (こども {len(children)}頭)")
+            render_koala_card(p, section_key="hero", is_hero=True)
+            
+            st.divider()
+            if children.empty:
+                st.write("記録されている子供はいません")
+            else:
+                children_sorted = children.sort_values('birthday')
+                COLS = 3
+                child_rows = [children_sorted.iloc[i:i+COLS] for i in range(0, len(children_sorted), COLS)]
+                for r_idx, row_data in enumerate(child_rows):
+                    cols = st.columns(COLS)
+                    for c_idx, (_, child) in enumerate(row_data.iterrows()):
+                        with cols[c_idx]:
+                            render_koala_card(child, section_key=f"child_{r_idx}_{c_idx}")
+
+    else: # Default Home View
+        # Birthday Section
         with st.container():
             st.markdown('<div class="birthday-section">', unsafe_allow_html=True)
             col1, col2 = st.columns(2)
@@ -367,7 +388,6 @@ def main():
             if bd_koalas.empty:
                 st.write("該当するコアラはいません")
             else:
-                # Birthday Horizontal List
                 cols = st.columns(min(len(bd_koalas), 4))
                 for idx, (_, k) in enumerate(bd_koalas.iterrows()):
                     with cols[idx % 4]:
@@ -387,93 +407,43 @@ def main():
                     st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
             
-        # Search
+        # Search Section
         st.markdown("### 🔍 コアラを探す")
         search_name = st.text_input("なまえで検索", placeholder="例：こまち、きらら...", key="search_input")
         zoos = [""] + sorted(list(set(df['zoo'].dropna())))
         search_zoo = st.selectbox("動物園から探す", zoos, key="search_zoo")
         
-        results = df.copy()
-        is_search = False
-        
-        if search_name:
-            is_search = True
-            results = results[results['name'].str.contains(search_name, case=False, na=False) | results['memo'].str.contains(search_name, case=False, na=False)]
-        elif search_zoo:
-            is_search = True
-            results = results[results['zoo'] == search_zoo]
+        is_search = bool(search_name or search_zoo)
+        if is_search:
+            results = df.copy()
+            if search_name:
+                results = results[results['name'].str.contains(search_name, case=False, na=False) | results['memo'].str.contains(search_name, case=False, na=False)]
+            if search_zoo:
+                results = results[results['zoo'] == search_zoo]
+            st.markdown(f"**結果: {len(results)}件**")
         else:
             # Recommendations
-            is_search = False
-            
-            # キャッシュされた関数でおすすめIDを取得（AM/PMが変わるまで不変）
-            @st.cache_data(ttl=3600*12)
-            def get_recommended_ids_cached(df_indexed, seed_str):
-                import zlib
-                seed = zlib.crc32(seed_str.encode())
-                # 常に同じ順序のDataFrameに対してサンプリングを行う
-                living = df_indexed[df_indexed.apply(lambda x: not check_is_dead(x), axis=1)]
-                dead = df_indexed[df_indexed.apply(lambda x: check_is_dead(x), axis=1)]
-                
-                r_living = living.sample(n=min(len(living), 2), random_state=seed % (2**32))
-                r_dead = dead.sample(n=min(len(dead), 1), random_state=zlib.crc32((seed_str + "dead").encode()) % (2**32))
-                
-                return [str(r['id']) for r in r_living.to_dict('records')] + \
-                       [str(r['id']) for r in r_dead.to_dict('records')]
-
             now = datetime.datetime.now()
             am_pm = "AM" if now.hour < 12 else "PM"
             time_seed_str = f"{now.strftime('%Y-%m-%d')}-{am_pm}"
-            
-            recommended_ids = get_recommended_ids_cached(df, time_seed_str)
-            
-            # 結果をフィルタリングして表示
-            results = df.loc[recommended_ids] if all(rid in df.index for rid in recommended_ids) else df[df['id'].isin(recommended_ids)]
+            recs_ids = get_recommended_ids_cached(df, time_seed_str)
+            # 常に存在するIDのみを抽出（念のため）
+            valid_recs = [rid for rid in recs_ids if rid in df.index]
+            results = df.loc[valid_recs]
             st.markdown("### 🌿 今日のおすすめコアラ")
 
-        if is_search: st.markdown(f"**結果: {len(results)}件**")
-        
         if not results.empty:
-            results['is_dead'] = results.apply(check_is_dead, axis=1)
-            results = results.sort_values('is_dead')
+            sorted_results = results.copy()
+            sorted_results['is_dead'] = sorted_results.apply(check_is_dead, axis=1)
+            sorted_results = sorted_results.sort_values(['is_dead', 'name'])
             
             COLS_PER_ROW = 3
-            rows = [results.iloc[i:i+COLS_PER_ROW] for i in range(0, len(results), COLS_PER_ROW)]
-            
-            for r_idx, row_data in enumerate(rows):
+            res_rows = [sorted_results.iloc[i:i+COLS_PER_ROW] for i in range(0, len(sorted_results), COLS_PER_ROW)]
+            for r_idx, row_data in enumerate(res_rows):
                 cols = st.columns(COLS_PER_ROW)
                 for c_idx, (_, koala) in enumerate(row_data.iterrows()):
                     with cols[c_idx]:
-                        # Section Key is important for uniqueness
                         render_koala_card(koala, section_key=f"list_{r_idx}_{c_idx}")
-
-    elif st.session_state.view == 'family':
-        target = df[df['id'] == st.session_state.selected_id]
-        if target.empty:
-            # ID not found, reset to home
-            st.session_state.view = 'home'
-            st.session_state.selected_id = None
-            st.query_params.clear()
-            st.rerun()
-        else:
-            p = target.iloc[0]
-            children = df[(df['father_id'] == p['id']) | (df['mother_id'] == p['id'])]
-            
-            st.markdown(f"### 🥰 {p['name']} の家系 (こども {len(children)}頭)")
-            render_koala_card(p, section_key="hero", is_hero=True)
-            
-            st.divider()
-            if children.empty:
-                st.write("記録されている子供はいません")
-            else:
-                children = children.sort_values('birthday')
-                COLS = 3
-                child_rows = [children.iloc[i:i+COLS] for i in range(0, len(children), COLS)]
-                for r_idx, row_data in enumerate(child_rows):
-                    cols = st.columns(COLS)
-                    for c_idx, (_, child) in enumerate(row_data.iterrows()):
-                        with cols[c_idx]:
-                            render_koala_card(child, section_key=f"child_{r_idx}_{c_idx}")
 
 if __name__ == "__main__":
     main()
