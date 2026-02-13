@@ -28,64 +28,98 @@ ZOO_URLS = {
 # --- CSS Injection ---
 STYLING = """
 <style>
-    .stApp { background-color: #f4f7f6; color: #333; font-family: "Helvetica Neue", Arial, sans-serif; }
-    .main-header { text-align: center; margin-bottom: 20px; color: #2e7d32; font-size: 1.8em; font-weight: bold; cursor: pointer; }
-    .subtitle { text-align: center; color: #666; font-size: 0.8em; margin-top: -10px; margin-bottom: 20px; }
+    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;700&family=Noto+Sans+JP:wght@400;700&display=swap');
+
+    .stApp { background-color: #f8fafc; color: #1e293b; font-family: 'Outfit', 'Noto Sans JP', sans-serif; }
     
+    /* Header & General */
+    [data-testid="stHeader"] { background: rgba(0,0,0,0); }
+    .main-header { 
+        text-align: center; margin-top: 10px; margin-bottom: 5px; color: #166534; 
+        font-size: 2.2em; font-weight: 700; cursor: pointer;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    .subtitle { text-align: center; color: #64748b; font-size: 0.9em; margin-bottom: 30px; letter-spacing: 0.05em; }
+
+    /* Home Button / Nav */
+    div.stButton > button {
+        border-radius: 9999px !important;
+        border: 1px solid #e2e8f0 !important;
+        background-color: white !important;
+        color: #475569 !important;
+        font-weight: 600 !important;
+        transition: all 0.2s !important;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important;
+    }
+    div.stButton > button:hover {
+        border-color: #166534 !important;
+        color: #166534 !important;
+        background-color: #f0fdf4 !important;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05) !important;
+    }
+
     /* Card Styling */
     .koala-card {
-        background: white; padding: 15px; border-radius: 12px;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-left: 5px solid #2e7d32;
-        margin-bottom: 10px; color: #333;
+        background: white; padding: 20px; border-radius: 16px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.03); border: 1px solid #f1f5f9;
+        margin-bottom: 0px; color: #1e293b;
+        transition: transform 0.2s, box-shadow 0.2s;
     }
-    .deceased-style { background-color: #f0f0f0; border-color: #ccc !important; color: #666; }
-    .parent-hero { background-color: #e8f5e9; border: 2px solid #2e7d32; }
+    .koala-card:hover {
+        box-shadow: 0 10px 25px rgba(0,0,0,0.06);
+    }
+    .deceased-style { background-color: #f8fafc; border-color: #e2e8f0 !important; opacity: 0.85; }
+    .parent-hero { background-color: #f0fdf4; border: 2px solid #166534; }
 
-    .koala-name { font-size: 1.2em; font-weight: bold; color: #333; display: inline-block; margin-right: 5px; }
-    .badge { font-size: 0.7em; padding: 2px 6px; border-radius: 10px; color: white; vertical-align: middle; display: inline-block; margin-right: 2px;}
-    .male { background-color: #4A90E2; }
-    .female { background-color: #E24A8D; }
-    .other { background-color: #999; }
-    .age { background-color: #2ecc71; }
-    .deceased-badge { background-color: #999; }
+    .koala-name { font-size: 1.3em; font-weight: 700; color: #0f172a; display: inline-block; margin-right: 8px; }
+    .badge { 
+        font-size: 0.7em; padding: 4px 10px; border-radius: 9999px; color: white; 
+        vertical-align: middle; display: inline-block; margin-right: 4px; font-weight: 600;
+        text-transform: uppercase; letter-spacing: 0.02em;
+    }
+    .male { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); }
+    .female { background: linear-gradient(135deg, #ec4899 0%, #db2777 100%); }
+    .other { background-color: #94a3b8; }
+    .age { background-color: #10b981; }
+    .deceased-badge { background-color: #64748b; }
 
     .koala-zoo {
-        display: inline-block; background-color: #e8f5e9; color: #2e7d32;
-        padding: 3px 8px; border-radius: 4px; font-size: 0.8em; font-weight: bold;
-        margin-bottom: 8px; margin-top: 5px;
+        display: inline-block; background-color: #f1f5f9; color: #475569;
+        padding: 4px 12px; border-radius: 8px; font-size: 0.85em; font-weight: 600;
+        margin-bottom: 15px; margin-top: 8px; border: 1px solid #e2e8f0;
     }
-    .deceased-style .koala-zoo { background-color: #eee; color: #666; }
+    .parent-hero .koala-zoo { background-color: #dcfce7; color: #166534; border-color: #bbf7d0; }
 
-    .detail-grid { display: grid; grid-template-columns: auto 1fr; gap: 2px 8px; font-size: 0.85em; color: #444; }
+    .detail-grid { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; font-size: 0.9em; color: #475569; }
+    .memo-box {
+        font-size: 0.85em; margin-top: 15px; background: #f8fafc; padding: 10px; 
+        border-radius: 8px; color: #64748b; font-style: italic; border-left: 3px solid #cbd5e1;
+    }
     
     /* Birthday Section */
-    .birthday-section {
-        background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
-        border-radius: 12px; padding: 15px; margin-bottom: 20px; border: 2px solid #ffcc80; text-align: center;
+    .birthday-container {
+        background: linear-gradient(135deg, #fffcf0 0%, #fff7ed 100%);
+        border-radius: 20px; padding: 25px; margin-bottom: 30px; border: 1px solid #ffedd5; 
+        box-shadow: 0 4px 12px rgba(251, 146, 60, 0.08);
     }
-    .birthday-title { color: #e65100; font-weight: bold; font-size: 1.1em; margin-bottom: 10px; }
+    .birthday-title-text { color: #9a3412; font-weight: 800; font-size: 1.3em; margin-bottom: 15px; text-align: center; }
     
-    /* Pedigree Table */
+    /* Pedigree Table (Small/Integrated) */
     .pedigree-table {
         display: grid; grid-template-columns: 1fr 1fr 1fr; grid-template-rows: repeat(4, 1fr);
-        gap: 2px; border: 2px solid #2e7d32; background-color: #2e7d32; width: 100%; margin: 10px auto;
+        gap: 2px; border-radius: 8px; overflow: hidden; background-color: #e2e8f0; width: 100%; margin: 15px 0; border: 1px solid #e2e8f0;
     }
-    .ped-cell { background-color: #f9f9f9; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 5px 2px; text-align: center; font-size: 0.75em; }
-    .ped-pos-self { font-size: 1em; background-color: #e8f5e9; font-weight: bold; }
-    .ped-male { border-left: 3px solid #4A90E2; }
-    .ped-female { border-left: 3px solid #E24A8D; }
-    
-    .ped-pos-ff { grid-column: 1; grid-row: 1; }
-    .ped-pos-fm { grid-column: 1; grid-row: 2; }
-    .ped-pos-mf { grid-column: 1; grid-row: 3; }
-    .ped-pos-mm { grid-column: 1; grid-row: 4; }
-    .ped-pos-father { grid-column: 2; grid-row: 1 / 3; }
-    .ped-pos-mother { grid-column: 2; grid-row: 3 / 5; }
-    .ped-pos-self { grid-column: 3; grid-row: 1 / 5; }
+    .ped-cell { background-color: white; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 6px 2px; text-align: center; font-size: 0.7em; }
+    .ped-pos-self { font-size: 0.9em; background-color: #f0fdf4; font-weight: 700; color: #166534; }
+    .ped-male { border-left: 3px solid #3b82f6; }
+    .ped-female { border-left: 3px solid #ec4899; }
 
-    /* Siblings */
-    .sibling-item { padding: 5px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; font-size: 0.9em; }
-    .sibling-section-title { font-weight: bold; color: #2e7d32; border-bottom: 2px solid #a5d6a7; margin-top: 10px; font-size: 0.9em; }
+    /* Custom Scrollbar for Birthday List */
+    .birthday-list-scroll {
+        display: flex; overflow-x: auto; gap: 15px; padding: 10px 0;
+        scrollbar-width: thin; scrollbar-color: #ffcc80 transparent;
+    }
 </style>
 """
 
