@@ -601,40 +601,46 @@
             background-color: #2e7d32;
             color: white;
             border: none;
-            padding: 8px 18px;
+            padding: 6px 14px;
             border-radius: 30px;
             font-weight: bold;
-            font-size: 0.85em;
+            font-size: 0.8em;
             cursor: pointer;
             text-align: center;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
             white-space: nowrap;
+            transition: all 0.2s;
         }
 
         .mypage-btn:hover {
             background-color: #256b29;
+            transform: translateY(-1px);
         }
 
         .welcome-container {
             display: none;
-            max-width: 600px;
-            margin: 0 auto 20px auto;
+            max-width: 650px;
+            margin: 0 auto 25px auto;
             background-color: #e8f5e9;
-            padding: 10px 15px;
-            border-radius: 12px;
+            padding: 8px 16px;
+            border-radius: 50px;
             align-items: center;
             justify-content: space-between;
-            gap: 10px;
+            gap: 12px;
+            border: 1px solid #c8e6c9;
         }
 
         .welcome-banner {
             color: #2e7d32;
             font-weight: 700;
-            font-size: 1.0em;
+            font-size: 0.95em;
             margin: 0;
             flex: 1;
             text-align: left;
-            line-height: 1.4;
+            line-height: 1.2;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
         .mypage-input-group {

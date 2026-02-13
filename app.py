@@ -142,10 +142,16 @@ STYLING = """
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); margin-bottom: 30px;
         border-top: 5px solid #2e7d32; text-align: center;
     }
-    .welcome-banner { 
-        background-color: #e8f5e9; color: #2e7d32; padding: 15px; 
-        border-radius: 12px; margin-bottom: 20px; font-weight: 700; 
-        text-align: center; font-size: 1.1em;
+    .welcome-bar { 
+        background-color: #e8f5e9; padding: 8px 16px; 
+        border-radius: 50px; margin: 0 auto 25px auto; font-weight: 700; 
+        display: flex; align-items: center; justify-content: space-between;
+        border: 1px solid #c8e6c9; max-width: 650px;
+    }
+    .welcome-text-inline {
+        color: #2e7d32; font-size: 0.95em; text-align: left; flex: 1;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        padding-top: 4px;
     }
     .fortune-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 20px; }
     .fortune-card {
@@ -162,18 +168,18 @@ STYLING = """
         text-align: center; margin-top: 30px;
     }
 
-    /* Transition Button (Small & Oval) */
+    /* Transition Button (Compact Oval) */
     div.stButton > button[key="btn_mypage"] {
         background-color: #2e7d32 !important;
         color: white !important;
         border-radius: 30px !important;
         font-weight: 700 !important;
-        font-size: 13px !important;
-        height: 34px !important;
+        font-size: 12px !important;
+        height: 30px !important;
         width: auto !important;
-        padding: 0 20px !important;
-        margin: 0 auto;
-        display: block;
+        padding: 0 15px !important;
+        margin: 0 !important;
+        border: none !important;
     }
 
     .birthday-list-scroll {
@@ -423,15 +429,17 @@ def main():
             if st.button("⬅️ 前のページに戻る", use_container_width=True, key="global_back"):
                 go_back()
                 
-    # 4.5 Welcome Banner & My Page Button
+    # 4.5 Welcome Bar (One-row)
     if view == 'home':
         display_name = f"{st.session_state.user_nickname}さん" if st.session_state.user_nickname else "ゲストさん"
+        st.markdown(f'<div class="welcome-bar">', unsafe_allow_html=True)
         col_greet, col_btn = st.columns([5, 1.5])
         with col_greet:
-            st.markdown(f'<div class="welcome-banner">🌟 ようこそ、{display_name}！今日もコアラに癒やされましょう 🐨</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="welcome-text-inline">🌟 ようこそ、{display_name}！今日もコアラに癒やされましょう 🐨</div>', unsafe_allow_html=True)
         with col_btn:
             if st.button("📛 my page", key="btn_mypage"):
                 navigate_to('mypage')
+        st.markdown('</div>', unsafe_allow_html=True)
 
     # 5. Modals (Overlays)
     if st.session_state.get('modal_mode'):
