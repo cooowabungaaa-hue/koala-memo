@@ -533,6 +533,101 @@
             gap: 5px;
             flex-wrap: wrap;
         }
+
+        /* ▼ マイページ用スタイル */
+        .profile-box {
+            background: white;
+            padding: 25px;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            margin-bottom: 30px;
+            border-top: 5px solid #2e7d32;
+            text-align: center;
+        }
+
+        .welcome-banner {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+            padding: 15px;
+            border-radius: 12px;
+            margin: 0 auto 20px auto;
+            max-width: 600px;
+            font-weight: 700;
+            text-align: center;
+            font-size: 1.1em;
+            display: none;
+        }
+
+        .fortune-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .fortune-card {
+            background: #fdfdfd;
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px solid #edf2f7;
+            text-align: center;
+        }
+
+        .fortune-label {
+            font-size: 0.8em;
+            color: #888;
+            margin-bottom: 5px;
+        }
+
+        .fortune-value {
+            font-size: 1.1em;
+            font-weight: 700;
+            color: #2e7d32;
+        }
+
+        .partner-card-outer {
+            background: linear-gradient(135deg, #f0f7ff 0%, #e0f0ff 100%);
+            border-radius: 16px;
+            padding: 30px;
+            border: 2px solid #add8e6;
+            text-align: center;
+            margin-top: 30px;
+            grid-column: 1 / -1;
+        }
+
+        .mypage-btn {
+            display: block;
+            width: 100%;
+            max-width: 300px;
+            margin: 0 auto 20px auto;
+            background-color: #2e7d32;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 1em;
+            cursor: pointer;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .mypage-btn:hover {
+            background-color: #256b29;
+        }
+
+        .mypage-input-group {
+            margin-bottom: 15px;
+            text-align: left;
+        }
+
+        .mypage-input-label {
+            display: block;
+            font-size: 0.9em;
+            font-weight: bold;
+            color: #2e7d32;
+            margin-bottom: 5px;
+        }
     </style>
 </head>
 
@@ -542,6 +637,8 @@
         <h1 onclick="goHome()">🐨 コアラメモ 🐨</h1>
         <p class="subtitle">Japan Koala Database</p>
     </header>
+
+    <div id="welcomeBanner" class="welcome-banner"></div>
 
     <button id="backButton" onclick="goHome()">← TOPにもどる</button>
 
@@ -556,21 +653,35 @@
             <div id="birthdayToggleContainer"></div>
         </div>
 
-        <div class="search-container" id="searchContainer">
-            <div class="search-group">
-                <label class="search-label">🔍 なまえで検索</label>
-                <div class="search-inputs">
-                    <input type="text" id="searchInput" placeholder="例：こまち、きらら..." onkeyup="filterByName()">
-                </div>
+    </div>
+    </div>
+    </div>
+    <button class="mypage-btn" onclick="navigate('mypage')">👤 マイページ</button>
+    </div>
+
+    <div id="myPageView" class="view-section">
+        <h2 style="text-align:center; color:#2e7d32;">👤 マイページ設定</h2>
+        <div class="profile-box">
+            <div class="mypage-input-group">
+                <label class="mypage-input-label">ニックネーム</label>
+                <input type="text" id="userNickname" placeholder="例：コアラ大好きマン" onchange="saveProfile()">
             </div>
-            <div class="search-group">
-                <label class="search-label">📍 動物園から探す</label>
-                <div class="search-inputs">
-                    <select id="zooFilter" onchange="filterByZoo()">
-                        <option value="">動物園を選択してください</option>
-                    </select>
-                </div>
+            <div class="mypage-input-group">
+                <label class="mypage-input-label">あなたの生年月日</label>
+                <input type="date" id="userBirthday" onchange="saveProfile()">
             </div>
+
+            <div id="fortuneDisplay" class="fortune-grid"></div>
+        </div>
+
+        <div id="myPageSameMonthSection">
+            <h3 id="sameMonthTitle" style="text-align:center; color:#2e7d32; margin-top:40px;">🎂 あなたと同じ月生まれのコアラ</h3>
+            <div id="myPageSameMonthList" class="koala-list"></div>
+        </div>
+
+        <div id="myPagePartnerSection">
+            <h3 style="text-align:center; color:#2e7d32; margin-top:40px;">❤️ あなたの運命のパートナーコアラ</h3>
+            <div id="myPagePartnerContent" class="koala-list"></div>
         </div>
     </div>
 
@@ -662,6 +773,8 @@
                 renderFamily(id);
             } else if (view === 'detail' && id) {
                 renderDetail(id);
+            } else if (view === 'mypage') {
+                renderMyPage();
             } else {
                 renderHome();
             }
@@ -726,11 +839,194 @@
             return x - Math.floor(x);
         }
 
+        // ▼ マイページ用ロジック & 占いロジック
+        function saveProfile() {
+            const nickname = document.getElementById('userNickname').value;
+            const birthday = document.getElementById('userBirthday').value;
+            localStorage.setItem('user_nickname', nickname);
+            localStorage.setItem('user_birthday', birthday);
+            updateWelcomeBanner();
+            if (window.location.search.includes('view=mypage')) {
+                renderMyPage();
+            }
+        }
+
+        function loadProfile() {
+            const nick = localStorage.getItem('user_nickname') || "";
+            const bday = localStorage.getItem('user_birthday') || "2000-01-01";
+            const nickInput = document.getElementById('userNickname');
+            const bdayInput = document.getElementById('userBirthday');
+            if (nickInput) nickInput.value = nick;
+            if (bdayInput) bdayInput.value = bday;
+            updateWelcomeBanner();
+        }
+
+        function updateWelcomeBanner() {
+            const nick = localStorage.getItem('user_nickname');
+            const banner = document.getElementById('welcomeBanner');
+            if (nick && banner) {
+                banner.textContent = `🌟 ようこそ、${nick}さん！今日もコアラに癒やされましょう 🐨`;
+                banner.style.display = 'block';
+            } else if (banner) {
+                banner.style.display = 'none';
+            }
+        }
+
+        function getAstrologySign(dateStr) {
+            if (!dateStr) return "不明";
+            const date = new Date(dateStr);
+            const m = date.getMonth() + 1;
+            const d = date.getDate();
+            if ((m == 1 && d >= 20) || (m == 2 && d <= 18)) return "水瓶座";
+            if ((m == 2 && d >= 19) || (m == 3 && d <= 20)) return "魚座";
+            if ((m == 3 && d >= 21) || (m == 4 && d <= 19)) return "牡羊座";
+            if ((m == 4 && d >= 20) || (m == 5 && d <= 20)) return "牡牛座";
+            if ((m == 5 && d >= 21) || (m == 6 && d <= 20)) return "双子座";
+            if ((m == 6 && d >= 21) || (m == 7 && d <= 22)) return "蟹座";
+            if ((m == 7 && d >= 23) || (m == 8 && d <= 22)) return "獅子座";
+            if ((m == 8 && d >= 23) || (m == 9 && d <= 22)) return "乙女座";
+            if ((m == 9 && d >= 23) || (m == 10 && d <= 22)) return "天秤座";
+            if ((m == 10 && d >= 23) || (m == 11 && d <= 21)) return "蠍座";
+            if ((m == 11 && d >= 22) || (m == 12 && d <= 21)) return "射手座";
+            return "山羊座";
+        }
+
+        function getNumerology(dateStr) {
+            if (!dateStr) return 0;
+            let s = dateStr.replace(/-/g, "");
+            while (s.length > 1) {
+                s = String([...s].reduce((acc, d) => acc + parseInt(d), 0));
+            }
+            return parseInt(s);
+        }
+
+        function getNineStarKi(dateStr) {
+            if (!dateStr) return "不明";
+            const year = new Date(dateStr).getFullYear();
+            const stars = ["一白水星", "二黒土星", "三碧木星", "四緑木星", "五黄土星", "六白金星", "七赤金星", "八白土星", "九紫火星"];
+            let s = String(year);
+            const sumDigits = (n) => String(n).split('').reduce((a, b) => a + parseInt(b), 0);
+            let sum = sumDigits(s);
+            while (sum > 9) sum = sumDigits(sum);
+            let idx = (12 - sum) % 9;
+            if (idx === 0) idx = 9;
+            return stars[idx - 1];
+        }
+
+        function getAnimalZodiac(dateStr) {
+            if (!dateStr) return "不明";
+            const year = new Date(dateStr).getFullYear();
+            const zodiacs = ["子（ね）", "丑（うし）", "寅（とら）", "卯（う）", "辰（たつ）", "巳（み）", "午（うま）", "未（ひつじ）", "申（さる）", "酉（とり）", "戌（いぬ）", "亥（いのしし）"];
+            return zodiacs[(year - 4) % 12];
+        }
+
+        function calculateCompatibility(u, k) {
+            let score = 0;
+            if (!k.birthday || k.birthday === "-") return 0;
+
+            // Koala birthday parsing (YYYY-MM-DD or YYYY/MM/DD)
+            const kDate = k.birthday.replace(/\//g, "-");
+            const kf = {
+                astrology: getAstrologySign(kDate),
+                numerology: getNumerology(kDate),
+                nineStar: getNineStarKi(kDate),
+                animal: getAnimalZodiac(kDate)
+            };
+
+            if (u.astrology === kf.astrology) score += 40;
+            if (u.numerology === kf.numerology) score += 30;
+            if (u.nineStar === kf.nineStar) score += 20;
+            if (u.animal === kf.animal) score += 10;
+            return score;
+        }
+
+        function renderMyPage() {
+            document.getElementById('homeView').style.display = 'none';
+            document.getElementById('listView').style.display = 'none';
+            document.getElementById('myPageView').style.display = 'block';
+            document.getElementById('backButton').style.display = 'block';
+
+            const bday = localStorage.getItem('user_birthday') || "2000-01-01";
+            const uFortune = {
+                astrology: getAstrologySign(bday),
+                numerology: getNumerology(bday),
+                nineStar: getNineStarKi(bday),
+                animal: getAnimalZodiac(bday)
+            };
+
+            document.getElementById('fortuneDisplay').innerHTML = `
+                <div class="fortune-card">
+                    <div class="fortune-label">✨ 西洋占星術</div>
+                    <div class="fortune-value">${uFortune.astrology}</div>
+                </div>
+                <div class="fortune-card">
+                    <div class="fortune-label">🔢 数秘術 (Life Path)</div>
+                    <div class="fortune-value">${uFortune.numerology}</div>
+                </div>
+                <div class="fortune-card">
+                    <div class="fortune-label">☯️ 九星気学</div>
+                    <div class="fortune-value">${uFortune.nineStar}</div>
+                </div>
+                <div class="fortune-card">
+                    <div class="fortune-label">🐾 動物占い (干支)</div>
+                    <div class="fortune-value">${uFortune.animal}</div>
+                </div>
+            `;
+
+            // Same Month Koalas
+            const userMonth = new Date(bday).getMonth() + 1;
+            document.getElementById('sameMonthTitle').textContent = `🎂 あなたと同じ ${userMonth}月生まれのコアラ`;
+            const sameMonthList = document.getElementById('myPageSameMonthList');
+            sameMonthList.innerHTML = '';
+            const sameMonthKs = koalaData.filter(k => {
+                const p = k.birthday?.split(/[-/]/);
+                return p && parseInt(p[1]) === userMonth;
+            }).slice(0, 6);
+            sameMonthKs.forEach(k => renderCard(k, sameMonthList));
+
+            // Partner Koala
+            const partnerContent = document.getElementById('myPagePartnerContent');
+            partnerContent.innerHTML = '<div style="text-align:center; grid-column:1/-1;">相性診断中...</div>';
+
+            setTimeout(() => {
+                const living = koalaData.filter(k => !checkIsDead(k));
+                let topPartner = null;
+                let topScore = -1;
+
+                living.forEach(k => {
+                    const s = calculateCompatibility(uFortune, k);
+                    if (s > topScore) {
+                        topScore = s;
+                        topPartner = k;
+                    }
+                });
+
+                partnerContent.innerHTML = '';
+                if (topPartner) {
+                    const outer = document.createElement('div');
+                    outer.className = 'partner-card-outer';
+                    outer.innerHTML = `
+                        <h4 style="margin-top:0;">🎊 最高の相性: ${topScore}点！</h4>
+                        <p>あなたと最も気が合うコアラは <strong>${topPartner.name}</strong> です！</p>
+                    `;
+                    partnerContent.appendChild(outer);
+                    renderCard(topPartner, outer, true);
+                } else {
+                    partnerContent.innerHTML = '<p style="text-align:center; grid-column:1/-1;">パートナー候補が見つかりませんでした</p>';
+                }
+            }, 500);
+
+            window.scrollTo(0, 0);
+        }
+
         // ▼ 描画ロジック
         function renderHome() {
             document.getElementById('homeView').style.display = 'block';
             document.getElementById('listView').style.display = 'block';
+            document.getElementById('myPageView').style.display = 'none';
             document.getElementById('backButton').style.display = 'none';
+
+            loadProfile();
 
             const list = document.getElementById('koalaList');
             const title = document.getElementById('listTitle');
@@ -1060,7 +1356,10 @@
         function changeBirthdayMonth(o) { currentBirthdayOffset = o; showBirthdayKoalas(); }
 
         if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => { });
-        window.addEventListener('load', loadFromSpreadsheet);
+        window.addEventListener('load', () => {
+            loadFromSpreadsheet();
+            loadProfile();
+        });
     </script>
 </body>
 
