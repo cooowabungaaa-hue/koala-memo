@@ -28,18 +28,18 @@ ZOO_URLS = {
 # --- CSS Injection ---
 STYLING = """
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;700&family=Noto+Sans+JP:wght@400;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700;900&family=Outfit:wght@400;700&display=swap');
 
     /* Global Page Styling */
     .stApp { 
         background-color: #f4f7f6; color: #333; 
-        font-family: 'Noto Sans JP', 'Helvetica Neue', Arial, sans-serif; 
+        font-family: 'Zen Maru Gothic', 'Noto Sans JP', sans-serif; 
     }
     .block-container { max-width: 1000px !important; padding-top: 1.5rem !important; }
 
     /* Typography Upgrades */
-    h1, h2, h3, .main-header, .koala-name, .birthday-title-text, .search-label-text, button, .badge, .age, .koala-zoo {
-        font-family: 'Outfit', 'Noto Sans JP', sans-serif !important;
+    h1, h2, h3, .main-header, .koala-name, .birthday-title-text, .search-label-text, button, .badge, .age, .koala-zoo, .subtitle-text {
+        font-family: 'Zen Maru Gothic', 'Outfit', sans-serif !important;
     }
 
     /* Header Styling */
