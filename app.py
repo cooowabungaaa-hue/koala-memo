@@ -98,10 +98,14 @@ STYLING = """
         border: 1px solid #ffcc80 !important;
         border-radius: 6px !important;
         font-weight: bold !important;
-        font-size: 0.8em !important;
+        font-size: 0.7em !important;
         height: 38px !important;
         width: 100% !important;
         padding: 0 !important;
+        white-space: nowrap !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
     }
     
     /* Birthday Filter Buttons (Pill shape) */
@@ -116,7 +120,8 @@ STYLING = """
     .insta-btn-link {
         display: flex; width: 100%; height: 38px; justify-content: center; align-items: center;
         background-color: #fce4ec; color: #d81b60 !important; border: 1px solid #f8bbd0;
-        border-radius: 6px; font-weight: bold; font-size: 0.8em; text-decoration: none;
+        border-radius: 6px; font-weight: bold; font-size: 0.7em; text-decoration: none;
+        white-space: nowrap !important;
     }
 
     .birthday-list-scroll {
@@ -246,22 +251,23 @@ def render_koala_card(koala, section_key, is_hero=False):
     st.markdown(html, unsafe_allow_html=True)
     
     # Buttons Area
+    # Using equal columns to ensure uniform button widths
     c = st.columns(4)
     with c[0]:
-        if st.button("家族さん", key=f"ped_{section_key}_{koala['id']}", use_container_width=True):
+        if st.button("🧬家族", key=f"ped_{section_key}_{koala['id']}", use_container_width=True):
             st.session_state.modal_mode = "pedigree"
             st.session_state.modal_target_id = koala['id']
             st.rerun()
     with c[1]:
-        if st.button("きょうだい", key=f"sib_{section_key}_{koala['id']}", use_container_width=True):
+        if st.button("🍒兄弟", key=f"sib_{section_key}_{koala['id']}", use_container_width=True):
             st.session_state.modal_mode = "siblings"
             st.session_state.modal_target_id = koala['id']
             st.rerun()
     with c[2]:
-        if st.button("こども", key=f"fam_{section_key}_{koala['id']}", use_container_width=True):
+        if st.button("👶子供", key=f"fam_{section_key}_{koala['id']}", use_container_width=True):
             navigate_to('family', koala['id'])
     with c[3]:
-        st.markdown(f'<a href="{insta_url}" target="_blank" class="insta-btn-link">Insta</a>', unsafe_allow_html=True)
+        st.markdown(f'<a href="{insta_url}" target="_blank" class="insta-btn-link">📸インスタ</a>', unsafe_allow_html=True)
 
 # --- Main Page Execution ---
 def main():
@@ -293,7 +299,7 @@ def main():
     
     c_nav1, c_nav2, c_nav3 = st.columns([1, 2, 1])
     with c_nav2:
-        if st.button("🏠 ホーム", use_container_width=True, key="global_home"):
+        if st.button("🏠ホームに戻る", use_container_width=True, key="global_home"):
             navigate_to('home')
         if view == 'family' and st.session_state.history:
             if st.button("⬅️ 前のページに戻る", use_container_width=True, key="global_back"):
