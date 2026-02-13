@@ -425,19 +425,13 @@ def main():
                 
     # 4.5 Welcome Banner & My Page Button
     if view == 'home':
-        if st.session_state.user_nickname:
-            col_greet, col_btn = st.columns([5, 1.5])
-            with col_greet:
-                st.markdown(f'<div class="welcome-banner">🌟 ようこそ、{st.session_state.user_nickname}さん！</div>', unsafe_allow_html=True)
-            with col_btn:
-                if st.button("📛 my page", key="btn_mypage"):
-                    navigate_to('mypage')
-        else:
-            # Not logged in / No nickname
-            c1, c2, c3 = st.columns([1, 2, 1])
-            with c2:
-                if st.button("📛 my page", key="btn_mypage", use_container_width=True):
-                    navigate_to('mypage')
+        display_name = f"{st.session_state.user_nickname}さん" if st.session_state.user_nickname else "ゲストさん"
+        col_greet, col_btn = st.columns([5, 1.5])
+        with col_greet:
+            st.markdown(f'<div class="welcome-banner">🌟 ようこそ、{display_name}！今日もコアラに癒やされましょう 🐨</div>', unsafe_allow_html=True)
+        with col_btn:
+            if st.button("📛 my page", key="btn_mypage"):
+                navigate_to('mypage')
 
     # 5. Modals (Overlays)
     if st.session_state.get('modal_mode'):

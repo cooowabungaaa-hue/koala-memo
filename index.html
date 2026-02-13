@@ -913,14 +913,11 @@
                 return;
             }
 
-            if (nick && container && banner) {
-                banner.textContent = `🌟 ようこそ、${nick}さん！今日もコアラに癒やされましょう 🐨`;
+            if (container && banner) {
+                const displayName = nick ? `${nick}さん` : "ゲストさん";
+                banner.textContent = `🌟 ようこそ、${displayName}！今日もコアラに癒やされましょう 🐨`;
                 container.style.display = 'flex';
-                if (homeBtnRow) homeBtnRow.style.display = 'none';
-            } else if (container) {
-                // ニックネームがない場合
-                container.style.display = 'none';
-                if (homeBtnRow) homeBtnRow.style.display = 'block';
+                if (homeBtnRow) homeBtnRow.style.display = 'none'; // 重複防止
             }
         }
 
