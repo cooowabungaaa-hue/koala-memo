@@ -587,10 +587,14 @@ def main():
                 return int(parts[1]) == target_m
             except: return False
             
-        same_month_ks = df[df['birthday'].apply(lambda x: is_month_match(x, m_user))]
+        same_month_ks = df[df['birthday'].apply(lambda x: is_month_match(x, m_user))].copy()
         if same_month_ks.empty:
             st.write("該当するコアラはいません")
         else:
+            # 存命コアラを優先的に上位表示
+            same_month_ks['is_dead'] = same_month_ks.apply(check_is_dead, axis=1)
+            same_month_ks = same_month_ks.sort_values('is_dead', ascending=True)
+            
             cols = st.columns(3)
             for idx, (_, k) in enumerate(same_month_ks.head(6).iterrows()):
                 with cols[idx % 3]:

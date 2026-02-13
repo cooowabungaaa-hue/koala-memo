@@ -1028,6 +1028,11 @@
             const sameMonthKs = koalaData.filter(k => {
                 const p = k.birthday?.split(/[-/]/);
                 return p && parseInt(p[1]) === userMonth;
+            }).sort((a, b) => {
+                const aDead = checkIsDead(a);
+                const bDead = checkIsDead(b);
+                if (aDead === bDead) return 0;
+                return aDead ? 1 : -1;
             }).slice(0, 6);
             sameMonthKs.forEach(k => renderCard(k, sameMonthList));
 
