@@ -603,15 +603,14 @@
                             if (item.father_id) item.father_id = String(item.father_id);
                             if (item.mother_id) item.mother_id = String(item.mother_id);
                             return item;
-                        });
+                        })
+                        .sort((a, b) => a.id.localeCompare(b.id)); // IDでソートしてサンプリングを安定させる
 
                     document.getElementById('loadingMsg').style.display = 'none';
                     populateZooFilter();
 
-                    if (!history.state) {
-                        history.replaceState({ page: 'list' }, null, '');
-                    }
-                    processState(history.state || { page: 'list' });
+                    // URLから初期状態を決定する
+                    processUrlParams();
                 },
                 error: function (err) {
                     document.getElementById('loadingMsg').textContent = 'データの読み込みに失敗しました。';
@@ -619,67 +618,88 @@
             });
         }
 
-        // ▼ ルーター
+        // ▼ ルーター (URLを唯一の基準にする)
         window.addEventListener('popstate', function (e) {
-            processState(e.state);
+            processUrlParams();
         });
 
-        function processState(state) {
+        function processUrlParams() {
+            const params = new URLSearchParams(window.location.search);
+            const view = params.get('view') || 'list';
+            const id = params.get('id');
+
             // 全モーダルを閉じる
             document.getElementById('pedigreeModal').style.display = 'none';
             document.getElementById('siblingModal').style.display = 'none';
 
-            if (!state || state.page === 'list') {
-                renderHome();
-                return;
-            }
             if (koalaData.length === 0) return;
 
-            if (state.page === 'detail') {
-                renderDetail(state.id);
-            } else if (state.page === 'family') {
-                renderFamily(state.id);
-            } else if (state.page === 'modal') {
-                // モーダル履歴のままリロードされた場合などはホームへ
-                goHome();
+            if (view === 'family' && id) {
+                renderFamily(id);
+            } else if (view === 'detail' && id) {
+                renderDetail(id);
+            } else {
+                renderHome();
             }
         }
 
-        function navigate(page, id) {
-            const idStr = String(id);
-            // ★修正点：モーダルから遷移する場合は replaceState で履歴を上書き（空白バグ防止）
-            if (history.state && history.state.page === 'modal') {
-                history.replaceState({ page: page, id: idStr }, null, '');
-            } else {
-                history.pushState({ page: page, id: idStr }, null, '');
-            }
-            processState({ page: page, id: idStr });
+        function navigate(view, id) {
+            const params = new URLSearchParams();
+            if (view !== 'list') params.set('view', view);
+            if (id) params.set('id', id);
+
+            const url = params.toString() ? '?' + params.toString() : window.location.pathname;
+
+            // 履歴に積む
+            history.pushState(null, null, url);
+            processUrlParams();
         }
 
         function goHome() {
-            history.pushState({ page: 'list' }, null, '');
-            processState({ page: 'list' });
+            navigate('list');
         }
 
         function jumpToKoala(id) { navigate('detail', id); }
         function showFamily(id) { navigate('family', id); }
 
         function showPedigree(id) {
-            history.pushState({ page: 'modal', id: String(id) }, null, '');
+            // モーダルはURLを変えずに表示（popstateで閉じられるようにするためだけに履歴を汚さない）
             renderPedigreeModal(String(id));
         }
         function showSiblings(id) {
-            history.pushState({ page: 'modal', id: String(id) }, null, '');
             renderSiblingsModal(String(id));
         }
 
         function closeModals() {
-            if (history.state && history.state.page === 'modal') {
-                history.back();
-            } else {
-                document.getElementById('pedigreeModal').style.display = 'none';
-                document.getElementById('siblingModal').style.display = 'none';
+            document.getElementById('pedigreeModal').style.display = 'none';
+            document.getElementById('siblingModal').style.display = 'none';
+        }
+
+        // 決定論的なシードのためのCRC32関数
+        function crc32(str) {
+            let crc = 0 ^ (-1);
+            for (let i = 0; i < str.length; i++) {
+                let p = (crc ^ str.charCodeAt(i)) & 0xFF;
+                let t = [
+                    0x00000000, 0x77073096, 0xEE0E612C, 0x990951BA, 0x076DC419, 0x706AF48F, 0xE963A535, 0x9E6495A3,
+                    0x0EDB8832, 0x79DCB8A4, 0xE0D5E91E, 0x97D2D988, 0x09B64C2B, 0x7EB17CBD, 0xE7B82D07, 0x90BF1D91
+                ][p & 0xF] ^ [
+                    0x00000000, 0x1DB71064, 0x3B6E20C8, 0x26D930AC, 0x76DC4190, 0x6B6B51F4, 0x4DB26158, 0x5005713C
+                ][(p >> 4) & 0xF] ^ (crc >>> 8); // 簡略化されたCRC
+                // 正確なCRC32テーブルを使用する代わりに、シンプルな擬似ハッシュでも十分
             }
+            // より確実なハッシュ:
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                hash = ((hash << 5) - hash) + str.charCodeAt(i);
+                hash |= 0;
+            }
+            return Math.abs(hash);
+        }
+
+        function seededRandom(seed) {
+            const x = Math.sin(seed++) * 10000;
+            return x - Math.floor(x);
         }
 
         // ▼ 描画ロジック
@@ -944,11 +964,34 @@
         function showRandomKoalas(count) {
             const liv = koalaData.filter(k => !checkIsDead(k));
             const dead = koalaData.filter(k => checkIsDead(k));
+
+            // 時間ベースのシード生成 (YYYY-MM-DD-AM/PM)
+            const now = new Date();
+            const ampm = now.getHours() < 12 ? "AM" : "PM";
+            const dateStr = now.toISOString().split('T')[0] + "-" + ampm;
+            let seed = crc32(dateStr);
+
+            const getSeededSample = (arr, n, s) => {
+                let result = [];
+                let tempArr = [...arr];
+                for (let i = 0; i < n && tempArr.length > 0; i++) {
+                    let r = seededRandom(s + i);
+                    let idx = Math.floor(r * tempArr.length);
+                    result.push(tempArr.splice(idx, 1)[0]);
+                }
+                return result;
+            };
+
             let sel = [];
-            const shuf = [...liv].sort(() => 0.5 - Math.random());
-            sel.push(...shuf.slice(0, 2));
-            if (dead.length) sel.push(dead.sort(() => 0.5 - Math.random())[0]);
-            else if (shuf.length > 2) sel.push(shuf[2]);
+            sel.push(...getSeededSample(liv, 2, seed));
+            if (dead.length) {
+                sel.push(...getSeededSample(dead, 1, seed + 999));
+            } else if (liv.length > 2) {
+                // 生きている子が3頭以上いれば補充
+                const remaining = liv.filter(k => !sel.includes(k));
+                sel.push(...getSeededSample(remaining, 1, seed + 888));
+            }
+
             renderListContent(sel);
         }
 
