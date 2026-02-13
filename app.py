@@ -95,6 +95,8 @@ def load_data():
     df = pd.read_csv(DATA_URL)
     df = df[df['name'].notna() & (df['name'] != "")]
     df['id'] = df['id'].astype(str)
+    # インデックスをIDで固定し、ソートすることでサンプリングの安定性を高める
+    df = df.set_index('id', drop=False).sort_index()
     df['father_id'] = df['father_id'].fillna("").astype(str).replace("nan", "").replace("0.0", "")
     df['mother_id'] = df['mother_id'].fillna("").astype(str).replace("nan", "").replace("0.0", "")
     df['father'] = df['father'].fillna("不明")
@@ -225,18 +227,20 @@ def main():
     if 'history' not in st.session_state: st.session_state.history = []
 
     # Synchronization with Query Params (Browser Back/Forward support)
-    q_view = st.query_params.get("view")
+    q_view = st.query_params.get("view", "home")
     q_id = st.query_params.get("id")
     
-    if q_view and q_view != st.session_state.view:
+    # セッション状態とURLのパラメータが食い違っている場合、URLを優先する
+    if q_view != st.session_state.view or q_id != st.session_state.selected_id:
         st.session_state.view = q_view
         st.session_state.selected_id = q_id
-    elif not q_view and st.session_state.view != 'home':
-        # URL has no params but state says we are not home (browser back to home)
-        st.session_state.view = 'home'
-        st.session_state.selected_id = None
 
     df = load_data()
+    
+    # データのロードに失敗した（空だった）場合の最小限のガード
+    if df.empty:
+        st.error("データの読み込みに失敗したか、データが空です。")
+        st.stop()
     
     # Header (clickable to home)
     st.markdown('<div class="main-header">🐨 コアラメモ 🐨</div>', unsafe_allow_html=True)
@@ -402,27 +406,29 @@ def main():
             # Recommendations
             is_search = False
             
-            # 1日2回（午前・午後）の更新に抑制するためのシード値を生成
-            import zlib
+            # キャッシュされた関数でおすすめIDを取得（AM/PMが変わるまで不変）
+            @st.cache_data(ttl=3600*12)
+            def get_recommended_ids_cached(df_indexed, seed_str):
+                import zlib
+                seed = zlib.crc32(seed_str.encode())
+                # 常に同じ順序のDataFrameに対してサンプリングを行う
+                living = df_indexed[df_indexed.apply(lambda x: not check_is_dead(x), axis=1)]
+                dead = df_indexed[df_indexed.apply(lambda x: check_is_dead(x), axis=1)]
+                
+                r_living = living.sample(n=min(len(living), 2), random_state=seed % (2**32))
+                r_dead = dead.sample(n=min(len(dead), 1), random_state=zlib.crc32((seed_str + "dead").encode()) % (2**32))
+                
+                return [str(r['id']) for r in r_living.to_dict('records')] + \
+                       [str(r['id']) for r in r_dead.to_dict('records')]
+
             now = datetime.datetime.now()
             am_pm = "AM" if now.hour < 12 else "PM"
             time_seed_str = f"{now.strftime('%Y-%m-%d')}-{am_pm}"
-            # hash()は実行ごとに変わる可能性があるため、zlib.crc32で固定値を生成
-            time_seed = zlib.crc32(time_seed_str.encode())
             
-            # シードを使ってサンプリングを固定
-            living = df[df.apply(lambda x: not check_is_dead(x), axis=1)]
-            dead = df[df.apply(lambda x: check_is_dead(x), axis=1)]
-            
-            # livingから2頭、deadから1頭を時間帯固定でサンプリング
-            recs_living = living.sample(n=min(len(living), 2), random_state=time_seed % (2**32))
-            recs_dead = dead.sample(n=min(len(dead), 1), random_state=zlib.crc32((time_seed_str + "dead").encode()) % (2**32))
-            
-            recommended_ids = [str(r['id']) for r in recs_living.to_dict('records')] + \
-                             [str(r['id']) for r in recs_dead.to_dict('records')]
+            recommended_ids = get_recommended_ids_cached(df, time_seed_str)
             
             # 結果をフィルタリングして表示
-            results = df[df['id'].isin(recommended_ids)]
+            results = df.loc[recommended_ids] if all(rid in df.index for rid in recommended_ids) else df[df['id'].isin(recommended_ids)]
             st.markdown("### 🌿 今日のおすすめコアラ")
 
         if is_search: st.markdown(f"**結果: {len(results)}件**")
