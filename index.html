@@ -560,27 +560,27 @@
 
         .fortune-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
             margin-top: 20px;
         }
 
         .fortune-card {
             background: #fdfdfd;
-            padding: 15px;
+            padding: 10px 5px;
             border-radius: 12px;
             border: 1px solid #edf2f7;
             text-align: center;
         }
 
         .fortune-label {
-            font-size: 0.8em;
+            font-size: 0.7em;
             color: #888;
-            margin-bottom: 5px;
+            margin-bottom: 3px;
         }
 
         .fortune-value {
-            font-size: 1.1em;
+            font-size: 0.95em;
             font-weight: 700;
             color: #2e7d32;
         }
@@ -713,14 +713,15 @@
             <div id="fortuneDisplay" class="fortune-grid"></div>
         </div>
 
+        <!-- 運命のコアラを上位に表示 -->
+        <div id="myPagePartnerSection">
+            <h3 style="text-align:center; color:#2e7d32; margin-top:40px;">💖 運命のパートナーコアラ</h3>
+            <div id="myPagePartnerContent" class="koala-list"></div>
+        </div>
+
         <div id="myPageSameMonthSection">
             <h3 id="sameMonthTitle" style="text-align:center; color:#2e7d32; margin-top:40px;">🎂 あなたと同じ月生まれのコアラ</h3>
             <div id="myPageSameMonthList" class="koala-list"></div>
-        </div>
-
-        <div id="myPagePartnerSection">
-            <h3 style="text-align:center; color:#2e7d32; margin-top:40px;">❤️ あなたの運命のパートナーコアラ</h3>
-            <div id="myPagePartnerContent" class="koala-list"></div>
         </div>
     </div>
 

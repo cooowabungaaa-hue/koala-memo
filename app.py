@@ -147,13 +147,13 @@ STYLING = """
         border-radius: 12px; margin-bottom: 20px; font-weight: 700; 
         text-align: center; font-size: 1.1em;
     }
-    .fortune-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; }
+    .fortune-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 20px; }
     .fortune-card {
-        background: #fdfdfd; padding: 15px; border-radius: 12px;
+        background: #fdfdfd; padding: 10px 5px; border-radius: 12px;
         border: 1px solid #edf2f7; text-align: center;
     }
-    .fortune-label { font-size: 0.8em; color: #888; margin-bottom: 5px; }
-    .fortune-value { font-size: 1.1em; font-weight: 700; color: #2e7d32; }
+    .fortune-label { font-size: 0.7em; color: #888; margin-bottom: 3px; }
+    .fortune-value { font-size: 0.95em; font-weight: 700; color: #2e7d32; }
 
     /* Partner Card */
     .partner-card-outer {
@@ -543,8 +543,28 @@ def main():
             st.write('</div>', unsafe_allow_html=True)
 
         st.divider()
+
+        # --- Partner Koala Compatibility (運命のコアラを上位に表示) ---
+        st.markdown("### 💖 あなたの運命のパートナーコアラ")
+        if u_fortune:
+            with st.spinner("相性診断中..."):
+                df_scores = df.copy()
+                df_scores['comp_score'] = df_scores.apply(lambda row: calculate_compatibility_score(u_fortune, row), axis=1)
+                partners = df_scores[df_scores.apply(lambda x: not check_is_dead(x), axis=1)].sort_values('comp_score', ascending=False)
+                
+                if not partners.empty:
+                    top_partner = partners.iloc[0]
+                    st.write('<div class="partner-card-outer">', unsafe_allow_html=True)
+                    st.markdown(f"#### 🎊 最高の相性: {top_partner['comp_score']}点！")
+                    st.markdown(f"あなたと最も気が合うコアラは **{top_partner['name']}** です！")
+                    render_koala_card(top_partner, section_key="partner_top", is_hero=True)
+                    st.write('</div>', unsafe_allow_html=True)
+                else:
+                    st.write("パートナー候補が見つかりませんでした")
+
+        st.divider()
         
-        # --- Same Birth Month Koalas ---
+        # --- Same Birth Month Koalas (同じ誕生月コアラを後に表示) ---
         m_user = st.session_state.user_birthday.month
         st.markdown(f"### 🎂 あなたと同じ {m_user}月生まれのコアラたち")
         
@@ -562,27 +582,6 @@ def main():
             for idx, (_, k) in enumerate(same_month_ks.head(6).iterrows()):
                 with cols[idx % 3]:
                     render_koala_card(k, section_key=f"mypage_month_{idx}")
-
-        st.divider()
-
-        # --- Partner Koala Compatibility ---
-        st.markdown("### ❤️ あなたの運命のパートナーコアラ")
-        if u_fortune:
-            with st.spinner("相性診断中..."):
-                df_scores = df.copy()
-                df_scores['comp_score'] = df_scores.apply(lambda row: calculate_compatibility_score(u_fortune, row), axis=1)
-                # Filter out dead koalas for partner recommendation (optional, but usually preferred)
-                partners = df_scores[df_scores.apply(lambda x: not check_is_dead(x), axis=1)].sort_values('comp_score', ascending=False)
-                
-                if not partners.empty:
-                    top_partner = partners.iloc[0]
-                    st.write('<div class="partner-card-outer">', unsafe_allow_html=True)
-                    st.markdown(f"#### 🎊 最高の相性: {top_partner['comp_score']}点！")
-                    st.markdown(f"あなたと最も気が合うコアラは **{top_partner['name']}** です！")
-                    render_koala_card(top_partner, section_key="partner_top", is_hero=True)
-                    st.write('</div>', unsafe_allow_html=True)
-                else:
-                    st.write("パートナー候補が見つかりませんでした")
 
     elif view == 'family':
         if selected_id not in df.index:
