@@ -31,98 +31,110 @@ STYLING = """
     @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;700&family=Noto+Sans+JP:wght@400;700&display=swap');
 
     /* Global Page Styling */
-    .stApp { background-color: #f4f7f6; color: #333; font-family: "Helvetica Neue", Arial, sans-serif; }
+    .stApp { 
+        background-color: #f4f7f6; color: #333; 
+        font-family: 'Noto Sans JP', 'Helvetica Neue', Arial, sans-serif; 
+    }
     .block-container { max-width: 1000px !important; padding-top: 1.5rem !important; }
+
+    /* Typography Upgrades */
+    h1, h2, h3, .main-header, .koala-name, .birthday-title-text, .search-label-text, button, .badge, .age, .koala-zoo {
+        font-family: 'Outfit', 'Noto Sans JP', sans-serif !important;
+    }
 
     /* Header Styling */
     .header-container { text-align: center; margin-bottom: 30px; }
-    .main-header { color: #2e7d32; font-size: 2.2em; font-weight: bold; cursor: pointer; margin-bottom: 5px; }
-    .subtitle-text { color: #888; font-size: 0.9em; margin-bottom: 20px; }
+    .main-header { 
+        color: #2e7d32; font-size: 2.8em; font-weight: 700; cursor: pointer; 
+        margin-bottom: 0px; letter-spacing: -0.02em;
+    }
+    .subtitle-text { color: #888; font-size: 0.9em; margin-bottom: 25px; font-weight: 400; letter-spacing: 0.1em; text-transform: uppercase; }
 
-    /* Nav Buttons (Scoped to specific keys) */
+    /* Nav Buttons */
     div.stButton > button[key="global_home"], div.stButton > button[key="global_back"] {
         border-radius: 20px !important;
         background-color: #666 !important;
         color: white !important;
         border: none !important;
         font-size: 0.9em !important;
-        height: 38px !important;
+        height: 40px !important;
         width: auto !important;
-        padding-left: 20px !important;
-        padding-right: 20px !important;
+        padding-left: 25px !important;
+        padding-right: 25px !important;
+        font-weight: 600 !important;
     }
 
-    /* Birthday Section (The Orange Box) */
+    /* Birthday Section */
     .birthday-section-outer {
         background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
-        border-radius: 12px; padding: 25px; margin-bottom: 30px; border: 2px solid #ffcc80;
-        text-align: center;
+        border-radius: 16px; padding: 30px; margin-bottom: 30px; border: 2px solid #ffcc80;
+        text-align: center; box-shadow: 0 4px 15px rgba(230, 81, 0, 0.05);
     }
-    .birthday-title-text { color: #e65100; font-weight: bold; font-size: 1.25em; margin-bottom: 20px; }
+    .birthday-title-text { color: #e65100; font-weight: 700; font-size: 1.4em; margin-bottom: 20px; }
     
-    /* Search Section (The White Box) */
+    /* Search Section */
     .search-section-outer {
-        background: white; padding: 20px; border-radius: 12px;
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05); margin-bottom: 15px;
+        background: white; padding: 25px; border-radius: 16px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04); margin-bottom: 20px;
     }
-    .search-label-text { font-size: 0.9em; font-weight: bold; color: #2e7d32; margin-bottom: 15px; display: block; }
+    .search-label-text { font-size: 1em; font-weight: 700; color: #2e7d32; margin-bottom: 12px; display: block; }
 
     /* Koala Card Styling */
     .koala-card {
-        background: white; padding: 20px; border-radius: 12px;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.06); border-left: 5px solid #2e7d32;
-        margin-bottom: 10px; color: #333; position: relative;
+        background: white; padding: 25px; border-radius: 16px;
+        box-shadow: 0 6px 15px rgba(0,0,0,0.05); border-left: 6px solid #2e7d32;
+        margin-bottom: 15px; color: #333; position: relative;
     }
-    .deceased-style { background-color: #f0f0f0; opacity: 0.95; border-color: #ccc !important; }
-    .parent-hero { background-color: #e8f5e9; border: 2px solid #2e7d32; border-left: 5px solid #2e7d32; }
+    .deceased-style { background-color: #f8f9f9; opacity: 0.95; border-color: #cbd5e0 !important; }
+    .parent-hero { background-color: #f1f8f1; border: 2px solid #2e7d32; border-left: 8px solid #2e7d32; }
 
-    .koala-name { font-size: 1.4em; font-weight: bold; color: #333; margin-bottom: 5px; display: block; }
-    .badge-container { margin-bottom: 10px; }
-    .badge { font-size: 0.75em; padding: 3px 10px; border-radius: 12px; color: white; margin-right: 5px; }
+    .koala-name { font-size: 1.6em; font-weight: 700; color: #2e7d32; margin-bottom: 8px; display: block; border-bottom: 1px solid #edf2f7; padding-bottom: 5px; }
+    .badge-container { margin-bottom: 12px; }
+    .badge { font-size: 0.8em; padding: 4px 12px; border-radius: 20px; color: white; margin-right: 6px; font-weight: 600; }
     .male { background-color: #4A90E2; }
     .female { background-color: #E24A8D; }
-    .age { background-color: #2ecc71; }
-    .deceased-badge { background-color: #999; }
+    .age { background-color: #48bb78; }
+    .deceased-badge { background-color: #a0aec0; }
     
     .koala-zoo {
-        display: inline-block; background-color: #e8f5e9; color: #2e7d32;
-        padding: 4px 12px; border-radius: 4px; font-size: 0.9em; font-weight: bold;
-        margin: 10px 0; border: 1px solid #c8e6c9;
+        display: inline-block; background-color: #f0fff4; color: #2e7d32;
+        padding: 5px 15px; border-radius: 8px; font-size: 0.9em; font-weight: 700;
+        margin: 12px 0; border: 1px solid #c6f6d5;
     }
-    .detail-grid { display: grid; grid-template-columns: 25px 1fr; gap: 8px; font-size: 0.95em; color: #555; }
+    .detail-grid { display: grid; grid-template-columns: 28px 1fr; gap: 10px; font-size: 1em; color: #4a5568; }
     
     /* Card Action Buttons */
     div.stButton > button[key*="ped_"], div.stButton > button[key*="sib_"], div.stButton > button[key*="fam_"] {
-        background-color: #fff3e0 !important;
-        color: #e65100 !important;
-        border: 1px solid #ffcc80 !important;
-        border-radius: 6px !important;
-        font-weight: bold !important;
-        font-size: 0.7em !important;
-        height: 38px !important;
+        background-color: #fffaf0 !important;
+        color: #dd6b20 !important;
+        border: 1px solid #fbd38d !important;
+        border-radius: 8px !important;
+        font-weight: 700 !important;
+        font-size: 0.85em !important;
+        height: 42px !important;
         width: 100% !important;
-        padding: 0 !important;
-        white-space: nowrap !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
+        transition: all 0.2s !important;
+    }
+    div.stButton > button[key*="ped_"]:hover, div.stButton > button[key*="sib_"]:hover, div.stButton > button[key*="fam_"]:hover {
+        background-color: #feebc8 !important;
+        transform: translateY(-1px);
     }
     
-    /* Birthday Filter Buttons (Pill shape) */
+    /* Birthday Filter Buttons */
     div.stButton > button[key*="btn_this_month"], div.stButton > button[key*="btn_next_month"] {
-        border-radius: 20px !important;
-        font-weight: bold !important;
-        width: auto !important;
-        padding-left: 30px !important;
-        padding-right: 30px !important;
+        border-radius: 25px !important;
+        font-weight: 700 !important;
+        font-size: 1em !important;
+        height: 44px !important;
     }
 
     .insta-btn-link {
-        display: flex; width: 100%; height: 38px; justify-content: center; align-items: center;
-        background-color: #fce4ec; color: #d81b60 !important; border: 1px solid #f8bbd0;
-        border-radius: 6px; font-weight: bold; font-size: 0.7em; text-decoration: none;
-        white-space: nowrap !important;
+        display: flex; width: 100%; height: 42px; justify-content: center; align-items: center;
+        background-color: #fff5f7; color: #d53f8c !important; border: 1px solid #feb2b2;
+        border-radius: 8px; font-weight: 700; font-size: 0.85em; text-decoration: none;
+        transition: all 0.2s;
     }
+    .insta-btn-link:hover { background-color: #fed7e2; transform: translateY(-1px); }
 
     .birthday-list-scroll {
         display: flex; overflow-x: auto; gap: 15px; padding: 10px 0;
