@@ -136,6 +136,41 @@ STYLING = """
     }
     .insta-btn-link:hover { background-color: #fed7e2; transform: translateY(-1px); }
 
+    /* My Page Specific Styling */
+    .profile-box {
+        background: white; padding: 25px; border-radius: 16px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); margin-bottom: 30px;
+        border-top: 5px solid #2e7d32; text-align: center;
+    }
+    .welcome-banner { 
+        background-color: #e8f5e9; color: #2e7d32; padding: 15px; 
+        border-radius: 12px; margin-bottom: 20px; font-weight: 700; 
+        text-align: center; font-size: 1.1em;
+    }
+    .fortune-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; }
+    .fortune-card {
+        background: #fdfdfd; padding: 15px; border-radius: 12px;
+        border: 1px solid #edf2f7; text-align: center;
+    }
+    .fortune-label { font-size: 0.8em; color: #888; margin-bottom: 5px; }
+    .fortune-value { font-size: 1.1em; font-weight: 700; color: #2e7d32; }
+
+    /* Partner Card */
+    .partner-card-outer {
+        background: linear-gradient(135deg, #f0f7ff 0%, #e0f0ff 100%);
+        border-radius: 16px; padding: 30px; border: 2px solid #add8e6;
+        text-align: center; margin-top: 30px;
+    }
+
+    /* Transition Button */
+    div.stButton > button[key="btn_mypage"] {
+        background-color: #2e7d32 !important;
+        color: white !important;
+        border-radius: 20px !important;
+        font-weight: 700 !important;
+        height: 44px !important;
+    }
+
     .birthday-list-scroll {
         display: flex; overflow-x: auto; gap: 15px; padding: 10px 0;
         scrollbar-width: thin; scrollbar-color: #ff9800 transparent;
@@ -161,24 +196,24 @@ def load_data():
         df['zoo'] = df['zoo'].fillna("-")
         df['gender'] = df['gender'].fillna("不明")
         df['birthday'] = df['birthday'].fillna("-")
-        df['age'] = df['age'].fillna("-")
-        df['death'] = df['death'].fillna("")
+        df['mother_id'] = df['mother_id'].fillna("").astype(str).replace("nan", "").replace("0.0", "")
         return df
     except Exception as e:
-        st.error(f"データの読み込み中にエラーが発生しました: {e}")
+        st.error(f"データ読み込みエラー: {e}")
         return pd.DataFrame()
 
 def check_is_dead(row):
-    return (str(row.get('death', '')).strip() != "") or (row.get('age') == "没年齢不明")
+    return "虹" in str(row['age']) or "没" in str(row['age']) or "🌈" in str(row['age']) or "虹" in str(row['memo'])
 
 def get_gender_class(gender):
-    if "オス" in str(gender): return "male"
-    if "メス" in str(gender): return "female"
-    return "other"
+    if 'オス' in gender: return 'male'
+    if 'メス' in gender: return 'female'
+    return ''
 
-def get_pedigree_style(k):
-    if pd.isna(k) or k is None: return ""
-    return "ped-male" if "オス" in str(k.get('gender', '')) else "ped-female"
+def get_pedigree_style(koala):
+    if koala is None: return ""
+    if check_is_dead(koala): return "deceased-style"
+    return get_gender_class(koala['gender'])
 
 @st.cache_data(ttl=3600*12)
 def get_recommended_ids_cached(df_indexed, seed_str):
@@ -194,6 +229,66 @@ def get_recommended_ids_cached(df_indexed, seed_str):
     if not dead.empty:
         recs.extend(dead.sample(n=min(len(dead), 1), random_state=zlib.crc32((seed_str + "dead").encode()) % (2**32))['id'].tolist())
     return recs
+
+# --- Fortune Telling Logic ---
+def get_astrology_sign(date):
+    if not date: return "不明"
+    m, d = date.month, date.day
+    if (m == 1 and d >= 20) or (m == 2 and d <= 18): return "水瓶座"
+    if (m == 2 and d >= 19) or (m == 3 and d <= 20): return "魚座"
+    if (m == 3 and d >= 21) or (m == 4 and d <= 19): return "牡羊座"
+    if (m == 4 and d >= 20) or (m == 5 and d <= 20): return "牡牛座"
+    if (m == 5 and d >= 21) or (m == 6 and d <= 20): return "双子座"
+    if (m == 6 and d >= 21) or (m == 7 and d <= 22): return "蟹座"
+    if (m == 7 and d >= 23) or (m == 8 and d <= 22): return "獅子座"
+    if (m == 8 and d >= 23) or (m == 9 and d <= 22): return "乙女座"
+    if (m == 9 and d >= 23) or (m == 10 and d <= 22): return "天秤座"
+    if (m == 10 and d >= 23) or (m == 11 and d <= 21): return "蠍座"
+    if (m == 11 and d >= 22) or (m == 12 and d <= 21): return "射手座"
+    return "山羊座"
+
+def get_numerology(date):
+    if not date: return 0
+    s = f"{date.year}{date.month:02d}{date.day:02d}"
+    while len(s) > 1:
+        s = str(sum(int(d) for d in s))
+    return int(s)
+
+def get_nine_star_ki(year):
+    stars = ["一白水星", "二黒土星", "三碧木星", "四緑木星", "五黄土星", "六白金星", "七赤金星", "八白土星", "九紫火星"]
+    s = sum(int(d) for d in str(year))
+    while s > 9: s = sum(int(d) for d in str(s))
+    idx = (12 - s) % 9
+    return stars[idx - 1]
+
+def get_animal_zodiac(year):
+    zodiacs = ["子（ね）", "丑（うし）", "寅（とら）", "卯（う）", "辰（たつ）", "巳（み）", "午（うま）", "未（ひつじ）", "申（さる）", "酉（とり）", "戌（いぬ）", "亥（いのしし）"]
+    return zodiacs[(year - 4) % 12]
+
+def get_user_fortunes(birthday):
+    if not birthday: return None
+    return {
+        "astrology": get_astrology_sign(birthday),
+        "numerology": get_numerology(birthday),
+        "nine_star": get_nine_star_ki(birthday.year),
+        "animal": get_animal_zodiac(birthday.year)
+    }
+
+def calculate_compatibility_score(u, k_row):
+    if not u: return 0
+    score = 0
+    try:
+        kb_str = k_row['birthday'].replace('/', '-')
+        parts = kb_str.split('-')
+        if len(parts) < 3: return 0
+        kb = datetime.date(int(parts[0]), int(parts[1]), int(parts[2]))
+        kf = get_user_fortunes(kb)
+        if u['astrology'] == kf['astrology']: score += 40
+        if u['numerology'] == kf['numerology']: score += 30
+        if u['nine_star'] == kf['nine_star']: score += 20
+        if u['animal'] == kf['animal']: score += 10
+    except: pass
+    return score
 
 # --- Navigation Functions ---
 def navigate_to(view, koala_id=None):
@@ -290,6 +385,9 @@ def main():
     if 'birthday_offset' not in st.session_state: st.session_state.birthday_offset = 0
     if 'show_dead_birthday' not in st.session_state: st.session_state.show_dead_birthday = False
     if 'modal_mode' not in st.session_state: st.session_state.modal_mode = None
+    
+    if 'user_nickname' not in st.session_state: st.session_state.user_nickname = ""
+    if 'user_birthday' not in st.session_state: st.session_state.user_birthday = datetime.date(2000, 1, 1)
 
     # 2. Data Loading
     df = load_data()
@@ -313,9 +411,16 @@ def main():
     with c_nav2:
         if st.button("🏠ホームに戻る", use_container_width=True, key="global_home"):
             navigate_to('home')
+        if not st.query_params.get("view") or st.query_params.get("view") == "home":
+             if st.button("👤 マイページ", use_container_width=True, key="btn_mypage"):
+                 navigate_to('mypage')
         if view == 'family' and st.session_state.history:
             if st.button("⬅️ 前のページに戻る", use_container_width=True, key="global_back"):
                 go_back()
+                
+    # 4.5 Welcome Banner
+    if view == 'home' and st.session_state.user_nickname:
+        st.markdown(f'<div class="welcome-banner">🌟 ようこそ、{st.session_state.user_nickname}さん！今日もコアラに癒やされましょう 🐨</div>', unsafe_allow_html=True)
 
     # 5. Modals (Overlays)
     if st.session_state.get('modal_mode'):
@@ -388,7 +493,87 @@ def main():
             st.session_state.modal_mode = None # Reset after triggering
 
     # 6. Main Routing View
-    if view == 'family':
+    if view == 'mypage':
+        st.markdown('### 👤 マイページ設定')
+        
+        with st.container():
+            st.write('<div class="profile-box">', unsafe_allow_html=True)
+            new_nick = st.text_input("ニックネーム", value=st.session_state.user_nickname, placeholder="例：コアラ大好きマン")
+            new_bday = st.date_input("あなたの生年月日", value=st.session_state.user_birthday, min_value=datetime.date(1900, 1, 1), max_value=datetime.date.today())
+            
+            if new_nick != st.session_state.user_nickname or new_bday != st.session_state.user_birthday:
+                st.session_state.user_nickname = new_nick
+                st.session_state.user_birthday = new_bday
+                st.rerun()
+            
+            # --- Fortune Display ---
+            u_fortune = get_user_fortunes(st.session_state.user_birthday)
+            if u_fortune:
+                st.markdown(f"""
+                <div class="fortune-grid">
+                    <div class="fortune-card">
+                        <div class="fortune-label">✨ 西洋占星術</div>
+                        <div class="fortune-value">{u_fortune['astrology']}</div>
+                    </div>
+                    <div class="fortune-card">
+                        <div class="fortune-label">🔢 数秘術 (Life Path)</div>
+                        <div class="fortune-value">{u_fortune['numerology']}</div>
+                    </div>
+                    <div class="fortune-card">
+                        <div class="fortune-label">☯️ 九星気学</div>
+                        <div class="fortune-value">{u_fortune['nine_star']}</div>
+                    </div>
+                    <div class="fortune-card">
+                        <div class="fortune-label">🐾 動物占い (干支)</div>
+                        <div class="fortune-value">{u_fortune['animal']}</div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+            st.write('</div>', unsafe_allow_html=True)
+
+        st.divider()
+        
+        # --- Same Birth Month Koalas ---
+        m_user = st.session_state.user_birthday.month
+        st.markdown(f"### 🎂 あなたと同じ {m_user}月生まれのコアラたち")
+        
+        def is_month_match(bday_str, target_m):
+            try:
+                parts = bday_str.replace('/', '-').split('-')
+                return int(parts[1]) == target_m
+            except: return False
+            
+        same_month_ks = df[df['birthday'].apply(lambda x: is_month_match(x, m_user))]
+        if same_month_ks.empty:
+            st.write("該当するコアラはいません")
+        else:
+            cols = st.columns(3)
+            for idx, (_, k) in enumerate(same_month_ks.head(6).iterrows()):
+                with cols[idx % 3]:
+                    render_koala_card(k, section_key=f"mypage_month_{idx}")
+
+        st.divider()
+
+        # --- Partner Koala Compatibility ---
+        st.markdown("### ❤️ あなたの運命のパートナーコアラ")
+        if u_fortune:
+            with st.spinner("相性診断中..."):
+                df_scores = df.copy()
+                df_scores['comp_score'] = df_scores.apply(lambda row: calculate_compatibility_score(u_fortune, row), axis=1)
+                # Filter out dead koalas for partner recommendation (optional, but usually preferred)
+                partners = df_scores[df_scores.apply(lambda x: not check_is_dead(x), axis=1)].sort_values('comp_score', ascending=False)
+                
+                if not partners.empty:
+                    top_partner = partners.iloc[0]
+                    st.write('<div class="partner-card-outer">', unsafe_allow_html=True)
+                    st.markdown(f"#### 🎊 最高の相性: {top_partner['comp_score']}点！")
+                    st.markdown(f"あなたと最も気が合うコアラは **{top_partner['name']}** です！")
+                    render_koala_card(top_partner, section_key="partner_top", is_hero=True)
+                    st.write('</div>', unsafe_allow_html=True)
+                else:
+                    st.write("パートナー候補が見つかりませんでした")
+
+    elif view == 'family':
         if selected_id not in df.index:
             st.error("お探しのコアラの情報が見つかりませんでした。ホームに戻ります。")
             navigate_to('home')
