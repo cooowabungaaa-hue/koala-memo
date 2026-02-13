@@ -919,9 +919,10 @@
 
             if (container && banner) {
                 const displayName = nick ? `${nick}さん` : "ゲストさん";
-                banner.textContent = `🌟 ようこそ、${displayName}！今日もコアラに癒やされましょう 🐨`;
+                const msg = `🌟 ようこそ、${displayName}！今日もコアラに癒やされましょう 🐨`;
+                banner.textContent = msg;
                 container.style.display = 'flex';
-                if (homeBtnRow) homeBtnRow.style.display = 'none'; // 重複防止
+                if (homeBtnRow) homeBtnRow.style.display = 'none';
             }
         }
 
