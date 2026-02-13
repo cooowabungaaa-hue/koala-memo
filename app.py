@@ -356,19 +356,24 @@ def main():
             # Recommendations
             is_search = False
             
-            if 'recommended_ids' not in st.session_state:
-                living = df[df.apply(lambda x: not check_is_dead(x), axis=1)]
-                dead = df[df.apply(lambda x: check_is_dead(x), axis=1)]
-                
-                recs = []
-                if len(living) >= 2: recs.extend(living.sample(2).to_dict('records'))
-                else: recs.extend(living.to_dict('records'))
-                if len(dead) > 0: recs.extend(dead.sample(1).to_dict('records'))
-                
-                st.session_state.recommended_ids = [str(r['id']) for r in recs]
-
-            # Use saved IDs to get the same koalas
-            results = df[df['id'].isin(st.session_state.recommended_ids)]
+            # 1日2回（午前・午後）の更新に抑制するためのシード値を生成
+            now = datetime.datetime.now()
+            am_pm = "AM" if now.hour < 12 else "PM"
+            time_seed = f"{now.strftime('%Y-%m-%d')}-{am_pm}"
+            
+            # シードを使ってサンプリングを固定
+            living = df[df.apply(lambda x: not check_is_dead(x), axis=1)]
+            dead = df[df.apply(lambda x: check_is_dead(x), axis=1)]
+            
+            # livingから2頭、deadから1頭を時間帯固定でサンプリング
+            recs_living = living.sample(n=min(len(living), 2), random_state=hash(time_seed) % (2**32))
+            recs_dead = dead.sample(n=min(len(dead), 1), random_state=hash(time_seed + "dead") % (2**32))
+            
+            recommended_ids = [str(r['id']) for r in recs_living.to_dict('records')] + \
+                             [str(r['id']) for r in recs_dead.to_dict('records')]
+            
+            # 結果をフィルタリングして表示
+            results = df[df['id'].isin(recommended_ids)]
             st.markdown("### 🌿 今日のおすすめコアラ")
 
         if is_search: st.markdown(f"**結果: {len(results)}件**")
