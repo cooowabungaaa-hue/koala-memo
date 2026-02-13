@@ -149,10 +149,16 @@ STYLING = """
         border: 1px solid #c8e6c9; max-width: 650px;
     }
     .welcome-text-inline {
-        color: #2e7d32; font-size: 0.95em; text-align: left; flex: 1;
-        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-        padding-top: 4px;
+        color: #2e7d32; font-size: 0.9em; text-align: left; flex: 1;
+        line-height: 1.3; padding-right: 10px;
     }
+    .mypage-btn-inline {
+        background-color: #2e7d32; color: white !important;
+        padding: 5px 12px; border-radius: 30px; font-weight: 700;
+        font-size: 0.8em; text-decoration: none; white-space: nowrap;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1); transition: all 0.2s;
+    }
+    .mypage-btn-inline:hover { background-color: #256b29; transform: translateY(-1px); }
     .fortune-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 20px; }
     .fortune-card {
         background: #fdfdfd; padding: 10px 5px; border-radius: 12px;
@@ -432,14 +438,13 @@ def main():
     # 4.5 Welcome Bar (One-row)
     if view == 'home':
         display_name = f"{st.session_state.user_nickname}さん" if st.session_state.user_nickname else "ゲストさん"
-        st.markdown(f'<div class="welcome-bar">', unsafe_allow_html=True)
-        col_greet, col_btn = st.columns([5, 1.5])
-        with col_greet:
-            st.markdown(f'<div class="welcome-text-inline">🌟 ようこそ、{display_name}！今日もコアラに癒やされましょう 🐨</div>', unsafe_allow_html=True)
-        with col_btn:
-            if st.button("📛 my page", key="btn_mypage"):
-                navigate_to('mypage')
-        st.markdown('</div>', unsafe_allow_html=True)
+        html = f"""
+        <div class="welcome-bar">
+            <div class="welcome-text-inline">🌟 ようこそ、{display_name}！今日もコアラに癒やされましょう 🐨</div>
+            <a href="/?view=mypage" target="_self" class="mypage-btn-inline">📛 my page</a>
+        </div>
+        """
+        st.markdown(html, unsafe_allow_html=True)
 
     # 5. Modals (Overlays)
     if st.session_state.get('modal_mode'):
