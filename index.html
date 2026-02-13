@@ -652,11 +652,23 @@
             <div class="birthday-list" id="birthdayList"></div>
             <div id="birthdayToggleContainer"></div>
         </div>
-
-    </div>
-    </div>
-    </div>
-    <button class="mypage-btn" onclick="navigate('mypage')">👤 マイページ</button>
+        <div class="search-container" id="searchContainer">
+            <div class="search-group">
+                <label class="search-label">🔍 なまえで検索</label>
+                <div class="search-inputs">
+                    <input type="text" id="searchInput" placeholder="例：こまち、きらら..." onkeyup="filterByName()">
+                </div>
+            </div>
+            <div class="search-group">
+                <label class="search-label">📍 動物園から探す</label>
+                <div class="search-inputs">
+                    <select id="zooFilter" onchange="filterByZoo()">
+                        <option value="">動物園を選択してください</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <button class="mypage-btn" onclick="navigate('mypage')">👤 マイページ</button>
     </div>
 
     <div id="myPageView" class="view-section">
