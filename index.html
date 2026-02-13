@@ -596,24 +596,44 @@
         }
 
         .mypage-btn {
-            display: block;
-            width: 100%;
-            max-width: 300px;
-            margin: 0 auto 20px auto;
+            display: inline-block;
+            width: auto;
             background-color: #2e7d32;
             color: white;
             border: none;
-            padding: 12px;
-            border-radius: 20px;
+            padding: 8px 18px;
+            border-radius: 30px;
             font-weight: bold;
-            font-size: 1em;
+            font-size: 0.85em;
             cursor: pointer;
             text-align: center;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            white-space: nowrap;
         }
 
         .mypage-btn:hover {
             background-color: #256b29;
+        }
+
+        .welcome-container {
+            display: none;
+            max-width: 600px;
+            margin: 0 auto 20px auto;
+            background-color: #e8f5e9;
+            padding: 10px 15px;
+            border-radius: 12px;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .welcome-banner {
+            color: #2e7d32;
+            font-weight: 700;
+            font-size: 1.05em;
+            margin: 0;
+            flex: 1;
+            text-align: left;
         }
 
         .mypage-input-group {
@@ -633,12 +653,10 @@
 
 <body>
 
-    <header>
-        <h1 onclick="goHome()">🐨 コアラメモ 🐨</h1>
-        <p class="subtitle">Japan Koala Database</p>
-    </header>
-
-    <div id="welcomeBanner" class="welcome-banner"></div>
+    <div id="welcomeContainer" class="welcome-container">
+        <div id="welcomeBanner" class="welcome-banner"></div>
+        <button class="mypage-btn" onclick="navigate('mypage')">📛 my page</button>
+    </div>
 
     <button id="backButton" onclick="goHome()">← TOPにもどる</button>
 
@@ -668,7 +686,10 @@
                 </div>
             </div>
         </div>
-        <button class="mypage-btn" onclick="navigate('mypage')">👤 マイページ</button>
+        <!-- ログインしていない場合などの予備ボタン -->
+        <div id="homeMyPageBtnRow" style="text-align:center; margin-bottom:20px;">
+            <button class="mypage-btn" onclick="navigate('mypage')">📛 my page</button>
+        </div>
     </div>
 
     <div id="myPageView" class="view-section">
@@ -875,12 +896,17 @@
 
         function updateWelcomeBanner() {
             const nick = localStorage.getItem('user_nickname');
+            const container = document.getElementById('welcomeContainer');
             const banner = document.getElementById('welcomeBanner');
-            if (nick && banner) {
-                banner.textContent = `🌟 ようこそ、${nick}さん！今日もコアラに癒やされましょう 🐨`;
-                banner.style.display = 'block';
-            } else if (banner) {
-                banner.style.display = 'none';
+            const homeBtnRow = document.getElementById('homeMyPageBtnRow');
+
+            if (nick && container && banner) {
+                banner.textContent = `🌟 ようこそ、${nick}さん！`;
+                container.style.display = 'flex';
+                if (homeBtnRow) homeBtnRow.style.display = 'none';
+            } else {
+                if (container) container.style.display = 'none';
+                if (homeBtnRow) homeBtnRow.style.display = 'block';
             }
         }
 
@@ -954,6 +980,8 @@
 
         function renderMyPage() {
             document.getElementById('homeView').style.display = 'none';
+            const welcomeContainer = document.getElementById('welcomeContainer');
+            if (welcomeContainer) welcomeContainer.style.display = 'none';
             document.getElementById('listView').style.display = 'none';
             document.getElementById('myPageView').style.display = 'block';
             document.getElementById('backButton').style.display = 'block';
@@ -1064,6 +1092,8 @@
             if (!target) { goHome(); return; }
 
             document.getElementById('homeView').style.display = 'none';
+            const welcomeContainer = document.getElementById('welcomeContainer');
+            if (welcomeContainer) welcomeContainer.style.display = 'none';
             document.getElementById('listView').style.display = 'block';
             document.getElementById('backButton').style.display = 'block';
 
@@ -1081,6 +1111,8 @@
             if (!parent) { goHome(); return; }
 
             document.getElementById('homeView').style.display = 'none';
+            const welcomeContainer = document.getElementById('welcomeContainer');
+            if (welcomeContainer) welcomeContainer.style.display = 'none';
             document.getElementById('listView').style.display = 'block';
             document.getElementById('backButton').style.display = 'block';
 

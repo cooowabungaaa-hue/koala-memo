@@ -162,13 +162,18 @@ STYLING = """
         text-align: center; margin-top: 30px;
     }
 
-    /* Transition Button */
+    /* Transition Button (Small & Oval) */
     div.stButton > button[key="btn_mypage"] {
         background-color: #2e7d32 !important;
         color: white !important;
-        border-radius: 20px !important;
+        border-radius: 30px !important;
         font-weight: 700 !important;
-        height: 44px !important;
+        font-size: 13px !important;
+        height: 34px !important;
+        width: auto !important;
+        padding: 0 20px !important;
+        margin: 0 auto;
+        display: block;
     }
 
     .birthday-list-scroll {
@@ -414,16 +419,25 @@ def main():
     with c_nav2:
         if st.button("🏠ホームに戻る", use_container_width=True, key="global_home"):
             navigate_to('home')
-        if not st.query_params.get("view") or st.query_params.get("view") == "home":
-             if st.button("👤 マイページ", use_container_width=True, key="btn_mypage"):
-                 navigate_to('mypage')
         if view == 'family' and st.session_state.history:
             if st.button("⬅️ 前のページに戻る", use_container_width=True, key="global_back"):
                 go_back()
                 
-    # 4.5 Welcome Banner
-    if view == 'home' and st.session_state.user_nickname:
-        st.markdown(f'<div class="welcome-banner">🌟 ようこそ、{st.session_state.user_nickname}さん！今日もコアラに癒やされましょう 🐨</div>', unsafe_allow_html=True)
+    # 4.5 Welcome Banner & My Page Button
+    if view == 'home':
+        if st.session_state.user_nickname:
+            col_greet, col_btn = st.columns([5, 1.5])
+            with col_greet:
+                st.markdown(f'<div class="welcome-banner">🌟 ようこそ、{st.session_state.user_nickname}さん！</div>', unsafe_allow_html=True)
+            with col_btn:
+                if st.button("📛 my page", key="btn_mypage"):
+                    navigate_to('mypage')
+        else:
+            # Not logged in / No nickname
+            c1, c2, c3 = st.columns([1, 2, 1])
+            with c2:
+                if st.button("📛 my page", key="btn_mypage", use_container_width=True):
+                    navigate_to('mypage')
 
     # 5. Modals (Overlays)
     if st.session_state.get('modal_mode'):
