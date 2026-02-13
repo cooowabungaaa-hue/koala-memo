@@ -403,7 +403,11 @@ def main():
                             render_koala_card(child, section_key=f"child_{r_idx}_{c_idx}")
 
     else: # Default Home View
-        # Birthday Section
+        # Birthday Section calculation
+        c_month = datetime.datetime.now().month
+        n_month = (datetime.datetime.now().replace(day=1) + datetime.timedelta(days=32)).month
+        m_target = c_month if st.session_state.birthday_offset == 0 else n_month
+
         st.markdown('<div class="birthday-section-box">', unsafe_allow_html=True)
         st.markdown(f'<div class="birthday-title-text">🎉 {m_target}月のお誕生日 🎉</div>', unsafe_allow_html=True)
         
@@ -418,11 +422,11 @@ def main():
                 st.rerun()
 
         def is_bday_match(bday_str):
-                if not bday_str or bday_str == '-': return False
-                parts = bday_str.replace('/', '-').split('-')
-                if len(parts) >= 2: return int(parts[1]) == m_target
-                return False
-                
+            if not bday_str or bday_str == '-': return False
+            parts = bday_str.replace('/', '-').split('-')
+            if len(parts) >= 2: return int(parts[1]) == m_target
+            return False
+            
         bd_koalas = df[df['birthday'].apply(is_bday_match)]
         dead_cnt = len([k for _, k in bd_koalas.iterrows() if check_is_dead(k)])
         
