@@ -181,12 +181,35 @@ def go_home():
     st.session_state.view = 'home'
     st.session_state.selected_id = None
     st.session_state.modal_mode = None
+    st.query_params.clear()
     st.rerun()
 
 def go_to_family(id_):
+    # 履歴管理
+    if 'history' not in st.session_state:
+        st.session_state.history = []
+    
+    # 現在のIDを履歴に追加（重複排除）
+    if st.session_state.selected_id and st.session_state.selected_id != str(id_):
+        if not st.session_state.history or st.session_state.history[-1] != st.session_state.selected_id:
+            st.session_state.history.append(st.session_state.selected_id)
+            if len(st.session_state.history) > 10:
+                st.session_state.history.pop(0)
+
     st.session_state.view = 'family'
     st.session_state.selected_id = str(id_)
     st.session_state.modal_mode = None
+    st.query_params.update({"view": "family", "id": str(id_)})
+    st.rerun()
+
+def go_back():
+    if 'history' in st.session_state and st.session_state.history:
+        prev_id = st.session_state.history.pop()
+        st.session_state.view = 'family'
+        st.session_state.selected_id = prev_id
+        st.query_params.update({"view": "family", "id": prev_id})
+    else:
+        go_home()
     st.rerun()
 
 # --- Main App ---
@@ -199,13 +222,33 @@ def main():
     if 'modal_mode' not in st.session_state: st.session_state.modal_mode = None 
     if 'birthday_offset' not in st.session_state: st.session_state.birthday_offset = 0
     if 'show_dead_birthday' not in st.session_state: st.session_state.show_dead_birthday = False
+    if 'history' not in st.session_state: st.session_state.history = []
+
+    # Synchronization with Query Params (Browser Back/Forward support)
+    q_view = st.query_params.get("view")
+    q_id = st.query_params.get("id")
+    
+    if q_view and q_view != st.session_state.view:
+        st.session_state.view = q_view
+        st.session_state.selected_id = q_id
+    elif not q_view and st.session_state.view != 'home':
+        # URL has no params but state says we are not home (browser back to home)
+        st.session_state.view = 'home'
+        st.session_state.selected_id = None
 
     df = load_data()
     
     # Header (clickable to home)
     st.markdown('<div class="main-header">🐨 コアラメモ 🐨</div>', unsafe_allow_html=True)
-    if st.button("🏠 ホームに戻る", key="home_btn", use_container_width=True):
-        go_home()
+    
+    col_nav1, col_nav2 = st.columns([1, 4])
+    with col_nav1:
+        if st.button("🏠 ホーム", key="home_btn", use_container_width=True):
+            go_home()
+    with col_nav2:
+        if st.session_state.view == 'family' and st.session_state.history:
+            if st.button("⬅️ 前のページに戻る", key="back_btn", use_container_width=True):
+                go_back()
     
     # --- Modals Overlay ---
     if st.session_state.modal_mode:
@@ -279,6 +322,9 @@ def main():
                         render_sib_list(f"💙 お父さん ({target['father']})", pat)
             
             show_modal()
+            # Clear modal state after triggering to prevent indefinite reappearance
+            st.session_state.modal_mode = None
+            st.session_state.modal_target_id = None
 
     # --- Router ---
     if st.session_state.view == 'home':
@@ -394,7 +440,12 @@ def main():
 
     elif st.session_state.view == 'family':
         target = df[df['id'] == st.session_state.selected_id]
-        if target.empty: go_home()
+        if target.empty:
+            # ID not found, reset to home
+            st.session_state.view = 'home'
+            st.session_state.selected_id = None
+            st.query_params.clear()
+            st.rerun()
         else:
             p = target.iloc[0]
             children = df[(df['father_id'] == p['id']) | (df['mother_id'] == p['id'])]
