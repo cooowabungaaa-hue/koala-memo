@@ -292,20 +292,29 @@ def get_user_fortunes(birthday):
     }
 
 def calculate_compatibility_score(u, k_row):
-    if not u: return 0
+    if not u: return 0, []
     score = 0
+    reasons = []
     try:
         kb_str = k_row['birthday'].replace('/', '-')
         parts = kb_str.split('-')
-        if len(parts) < 3: return 0
+        if len(parts) < 3: return 0, []
         kb = datetime.date(int(parts[0]), int(parts[1]), int(parts[2]))
         kf = get_user_fortunes(kb)
-        if u['astrology'] == kf['astrology']: score += 40
-        if u['numerology'] == kf['numerology']: score += 30
-        if u['nine_star'] == kf['nine_star']: score += 20
-        if u['animal'] == kf['animal']: score += 10
+        if u['astrology'] == kf['astrology']:
+            score += 40
+            reasons.append("✨ 西洋占星術が一致")
+        if u['numerology'] == kf['numerology']:
+            score += 30
+            reasons.append("🔢 数秘術 (Life Path) が一致")
+        if u['nine_star'] == kf['nine_star']:
+            score += 20
+            reasons.append("☯️ 九星気学が一致")
+        if u['animal'] == kf['animal']:
+            score += 10
+            reasons.append("🐾 動物占い (干支) が一致")
     except: pass
-    return score
+    return score, reasons
 
 # --- Navigation Functions ---
 def navigate_to(view, koala_id=None):
@@ -557,19 +566,31 @@ def main():
 
         st.divider()
 
-        # --- Partner Koala Compatibility (運命のコアラを上位に表示) ---
+        # --- Partner Koala Compatibility (運命のコアラ：存命優先 + 理由表示) ---
         st.markdown("### 💖 あなたの運命のパートナーコアラ")
         if u_fortune:
             with st.spinner("相性診断中..."):
                 df_scores = df.copy()
-                df_scores['comp_score'] = df_scores.apply(lambda row: calculate_compatibility_score(u_fortune, row), axis=1)
-                partners = df_scores[df_scores.apply(lambda x: not check_is_dead(x), axis=1)].sort_values('comp_score', ascending=False)
+                # スコアと理由を計算
+                results = df_scores.apply(lambda row: calculate_compatibility_score(u_fortune, row), axis=1)
+                df_scores['comp_score'] = [r[0] for r in results]
+                df_scores['reasons'] = [r[1] for r in results]
+                df_scores['is_living'] = df_scores.apply(lambda x: not check_is_dead(x), axis=1)
+                
+                # 存命(is_living=True)を最優先、次にスコアでソート
+                partners = df_scores.sort_values(['is_living', 'comp_score'], ascending=False)
                 
                 if not partners.empty:
                     top_partner = partners.iloc[0]
                     st.write('<div class="partner-card-outer">', unsafe_allow_html=True)
                     st.markdown(f"#### 🎊 最高の相性: {top_partner['comp_score']}点！")
                     st.markdown(f"あなたと最も気が合うコアラは **{top_partner['name']}** です！")
+                    
+                    # 選定理由の表示
+                    if top_partner['reasons']:
+                        reason_html = "".join([f'<span class="badge age" style="display:inline-block; margin:2px;">{r}</span>' for r in top_partner['reasons']])
+                        st.markdown(f'<div style="margin-bottom:15px;"><strong>【選ばれた理由】</strong><br/>{reason_html}</div>', unsafe_allow_html=True)
+                    
                     render_koala_card(top_partner, section_key="partner_top", is_hero=True)
                     st.write('</div>', unsafe_allow_html=True)
                 else:

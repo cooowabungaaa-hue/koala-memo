@@ -967,9 +967,9 @@
 
         function calculateCompatibility(u, k) {
             let score = 0;
-            if (!k.birthday || k.birthday === "-") return 0;
+            let reasons = [];
+            if (!k.birthday || k.birthday === "-") return { score: 0, reasons: [] };
 
-            // Koala birthday parsing (YYYY-MM-DD or YYYY/MM/DD)
             const kDate = k.birthday.replace(/\//g, "-");
             const kf = {
                 astrology: getAstrologySign(kDate),
@@ -978,11 +978,23 @@
                 animal: getAnimalZodiac(kDate)
             };
 
-            if (u.astrology === kf.astrology) score += 40;
-            if (u.numerology === kf.numerology) score += 30;
-            if (u.nineStar === kf.nineStar) score += 20;
-            if (u.animal === kf.animal) score += 10;
-            return score;
+            if (u.astrology === kf.astrology) {
+                score += 40;
+                reasons.push("✨ 西洋占星術が一致");
+            }
+            if (u.numerology === kf.numerology) {
+                score += 30;
+                reasons.push("🔢 数秘術 (Life Path) が一致");
+            }
+            if (u.nineStar === kf.nineStar) {
+                score += 20;
+                reasons.push("☯️ 九星気学が一致");
+            }
+            if (u.animal === kf.animal) {
+                score += 10;
+                reasons.push("🐾 動物占い (干支) が一致");
+            }
+            return { score, reasons };
         }
 
         function renderMyPage() {
@@ -1041,25 +1053,35 @@
             partnerContent.innerHTML = '<div style="text-align:center; grid-column:1/-1;">相性診断中...</div>';
 
             setTimeout(() => {
-                const living = koalaData.filter(k => !checkIsDead(k));
-                let topPartner = null;
-                let topScore = -1;
-
-                living.forEach(k => {
-                    const s = calculateCompatibility(uFortune, k);
-                    if (s > topScore) {
-                        topScore = s;
-                        topPartner = k;
-                    }
+                const scoredData = koalaData.map(k => {
+                    const result = calculateCompatibility(uFortune, k);
+                    return { ...k, comp_score: result.score, reasons: result.reasons, is_living: !checkIsDead(k) };
                 });
 
+                // 存命優先、次にスコア順
+                scoredData.sort((a, b) => {
+                    if (a.is_living !== b.is_living) return a.is_living ? -1 : 1;
+                    return b.comp_score - a.comp_score;
+                });
+
+                const topPartner = scoredData[0];
                 partnerContent.innerHTML = '';
-                if (topPartner) {
+                if (topPartner && topPartner.comp_score > 0) {
                     const outer = document.createElement('div');
                     outer.className = 'partner-card-outer';
+
+                    let reasonHtml = "";
+                    if (topPartner.reasons.length > 0) {
+                        reasonHtml = `<div style="margin-bottom:15px; font-size:0.9em;">
+                            <strong>【選ばれた理由】</strong><br/>
+                            ${topPartner.reasons.map(r => `<span class="badge age" style="display:inline-block; margin:2px;">${r}</span>`).join('')}
+                        </div>`;
+                    }
+
                     outer.innerHTML = `
-                        <h4 style="margin-top:0;">🎊 最高の相性: ${topScore}点！</h4>
+                        <h4 style="margin-top:0;">🎊 最高の相性: ${topPartner.comp_score}点！</h4>
                         <p>あなたと最も気が合うコアラは <strong>${topPartner.name}</strong> です！</p>
+                        ${reasonHtml}
                     `;
                     partnerContent.appendChild(outer);
                     renderCard(topPartner, outer, true);
