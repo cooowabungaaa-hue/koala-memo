@@ -630,10 +630,11 @@
         .welcome-banner {
             color: #2e7d32;
             font-weight: 700;
-            font-size: 1.05em;
+            font-size: 1.0em;
             margin: 0;
             flex: 1;
             text-align: left;
+            line-height: 1.4;
         }
 
         .mypage-input-group {
@@ -652,6 +653,11 @@
 </head>
 
 <body>
+
+    <header>
+        <h1 onclick="goHome()">🐨 コアラメモ 🐨</h1>
+        <p class="subtitle">Japan Koala Database</p>
+    </header>
 
     <div id="welcomeContainer" class="welcome-container">
         <div id="welcomeBanner" class="welcome-banner"></div>
@@ -899,13 +905,21 @@
             const container = document.getElementById('welcomeContainer');
             const banner = document.getElementById('welcomeBanner');
             const homeBtnRow = document.getElementById('homeMyPageBtnRow');
+            const isHome = !window.location.search.includes('view=') || window.location.search.includes('view=list');
+
+            if (!isHome) {
+                if (container) container.style.display = 'none';
+                if (homeBtnRow) homeBtnRow.style.display = 'none';
+                return;
+            }
 
             if (nick && container && banner) {
-                banner.textContent = `🌟 ようこそ、${nick}さん！`;
+                banner.textContent = `🌟 ようこそ、${nick}さん！今日もコアラに癒やされましょう 🐨`;
                 container.style.display = 'flex';
                 if (homeBtnRow) homeBtnRow.style.display = 'none';
-            } else {
-                if (container) container.style.display = 'none';
+            } else if (container) {
+                // ニックネームがない場合
+                container.style.display = 'none';
                 if (homeBtnRow) homeBtnRow.style.display = 'block';
             }
         }
